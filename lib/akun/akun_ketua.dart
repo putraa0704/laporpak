@@ -1,11 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import '../Date/date.dart';
-import '../history/history.dart';
-import '../Home/home.dart';
 import '../flutterViz_bottom_navigationBar_model.dart';
+import '../services/auth_service.dart';
+import '../models/user_model.dart';
 
-class ProfilKetua extends StatelessWidget {
+// Import halaman lain
+import '../Date/datert.dart';
+import '../history/historyrt.dart';
+import '../rt/rt_home.dart';
+
+class ProfilKetua extends StatefulWidget {
+  const ProfilKetua({super.key});
+
+  @override
+  State<ProfilKetua> createState() => _ProfilKetuaState();
+}
+
+class _ProfilKetuaState extends State<ProfilKetua> {
+  final int _selectedIndex = 3;
+  UserModel? currentUser;
+  bool isLoading = true;
+
   final List<FlutterVizBottomNavigationBarModel> navItems = [
     FlutterVizBottomNavigationBarModel(icon: Icons.home, label: "Home"),
     FlutterVizBottomNavigationBarModel(icon: Icons.calendar_today, label: "Date"),
@@ -13,22 +28,148 @@ class ProfilKetua extends StatelessWidget {
     FlutterVizBottomNavigationBarModel(icon: Icons.account_circle, label: "Account"),
   ];
 
-  final int _selectedIndex = 3; // Halaman aktif: Akun
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    setState(() => isLoading = true);
+
+    // Ambil data user dari local storage
+    final user = await AuthService.getSavedUser();
+
+    if (user != null) {
+      setState(() {
+        currentUser = user;
+        isLoading = false;
+      });
+    } else {
+      // Jika tidak ada user, ambil dari server
+      final result = await AuthService.getCurrentUser();
+      if (result['success']) {
+        setState(() {
+          currentUser = UserModel.fromJson(result['data']);
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Gagal memuat data user'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    // Tampilkan dialog konfirmasi
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Keluar Akun',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff5f34e0),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Ya, Keluar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      // Tampilkan loading
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Color(0xff5f34e0)),
+        ),
+      );
+
+      // Proses logout
+      final result = await AuthService.logout();
+
+      if (!mounted) return;
+      Navigator.pop(context); // Tutup loading dialog
+
+      if (result['success']) {
+        // Redirect ke login page
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/login',
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Logout gagal'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _onItemTapped(int index) {
+    if (index == _selectedIndex) return;
+
+    Widget? nextPage;
+    switch (index) {
+      case 0:
+        nextPage = const HomeRt();
+        break;
+      case 1:
+        nextPage = const DateRT();
+        break;
+      case 2:
+        nextPage = const HistoryRT();
+        break;
+      case 3:
+        nextPage = const ProfilKetua();
+        break;
+    }
+
+    if (nextPage != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => nextPage!),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xfff8f8f8),
 
-      // =============================
-      // APP BAR
-      // =============================
       appBar: AppBar(
         elevation: 4,
         centerTitle: true,
         backgroundColor: const Color(0xff5f34e0),
         title: const Text(
-          "Lapor Pak",
+          "Lapor Pak - Ketua RT",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
@@ -36,14 +177,14 @@ class ProfilKetua extends StatelessWidget {
           ),
         ),
         leading: const Icon(Icons.menu, color: Colors.white, size: 24),
-        actions: const [
-          Icon(Icons.notifications_none, color: Colors.white, size: 24),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _loadUserData,
+          ),
         ],
       ),
 
-      // =============================
-      // NAVBAR
-      // =============================
       bottomNavigationBar: BottomNavigationBar(
         items: navItems
             .map((item) => BottomNavigationBarItem(
@@ -61,163 +202,161 @@ class ProfilKetua extends StatelessWidget {
         unselectedFontSize: 9,
         showSelectedLabels: true,
         showUnselectedLabels: false,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HomeWarga()),
-              );
-              break;
-
-            case 1:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const DatePage()),
-              );
-              break;
-
-            case 2:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HistoryLaporan()),
-              );
-              break;
-
-            case 3:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => ProfilKetua()),
-              );
-              break;
-
-            default:
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("Menu ${navItems[index].label} belum diaktifkan"),
-                ),
-              );
-          }
-        },
+        type: BottomNavigationBarType.fixed,
+        onTap: _onItemTapped,
       ),
 
-      // =============================
-      // BODY
-      // =============================
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
-        child: Column(
-          children: [
-            // ==================================
-            // 1️⃣ FOTO PROFIL & NAMA
-            // ==================================
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Lottie.network(
-                  "https://assets8.lottiefiles.com/packages/lf20_8ydmsved.json",
-                  height: 180,
-                  width: 180,
-                  fit: BoxFit.cover,
-                ),
-                Container(
-                  height: 120,
-                  width: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xff5f34e0), width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      )
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xff5f34e0)),
+            )
+          : currentUser == null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                      const SizedBox(height: 16),
+                      const Text('Gagal memuat data user'),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadUserData,
+                        child: const Text('Coba Lagi'),
+                      ),
                     ],
                   ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Image.asset(
-                    "assets/profile.png",
-                    fit: BoxFit.cover,
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
+                  child: Column(
+                    children: [
+                      // FOTO PROFIL & NAMA
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Lottie.network(
+                            "https://assets8.lottiefiles.com/packages/lf20_8ydmsved.json",
+                            height: 180,
+                            width: 180,
+                            fit: BoxFit.cover,
+                          ),
+                          Container(
+                            height: 120,
+                            width: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xff5f34e0).withOpacity(0.1),
+                              border: Border.all(
+                                  color: const Color(0xff5f34e0), width: 3),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                )
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                currentUser!.getInitials(),
+                                style: const TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xff5f34e0),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        currentUser!.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        currentUser!.getRoleLabel(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: Color(0xff5f34e0),
+                        ),
+                      ),
+                      const SizedBox(height: 25),
+
+                      // INFO KONTAK
+                      _infoCard(
+                        icon: Icons.mail_outline,
+                        title: "Email",
+                        value: currentUser!.email,
+                      ),
+                      const SizedBox(height: 14),
+
+                      if (currentUser!.hasPhone())
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _infoCard(
+                            icon: Icons.phone_outlined,
+                            title: "Nomor Telepon",
+                            value: currentUser!.phone!,
+                          ),
+                        ),
+
+                      if (currentUser!.hasAddress())
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _infoCard(
+                            icon: Icons.location_on_outlined,
+                            title: "Alamat",
+                            value: currentUser!.address!,
+                          ),
+                        ),
+
+                      _infoCard(
+                        icon: Icons.work_outline,
+                        title: "Tugas",
+                        value:
+                            "Mengelola dan memverifikasi laporan warga di wilayah RT. Berkoordinasi dengan admin dan petugas untuk penyelesaian masalah.",
+                      ),
+
+                      const SizedBox(height: 35),
+
+                      // TOMBOL LOGOUT
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _handleLogout,
+                          icon: const Icon(Icons.logout, color: Colors.white),
+                          label: const Text(
+                            "Keluar Akun",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xff5f34e0),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "Kentangtintung",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              "Warga",
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: Color(0xff5f34e0),
-              ),
-            ),
-            const SizedBox(height: 25),
-
-            // ==================================
-            // 2️⃣ INFO KONTAK
-            // ==================================
-            _infoCard(
-              icon: Icons.mail_outline,
-              title: "Email",
-              value: "emailwarga@gmail.com",
-            ),
-            const SizedBox(height: 14),
-            _infoCard(
-              icon: Icons.location_on_outlined,
-              title: "Alamat",
-              value:
-                  "Perumahan Alfa, Blok A-15, Blimbing, Kec. Torimiso, Kota Malang, 65112",
-            ),
-
-            const SizedBox(height: 35),
-
-            // ==================================
-            // 3️⃣ TOMBOL LOGOUT
-            // ==================================
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Tambahkan aksi logout
-                },
-                icon: const Icon(Icons.logout, color: Colors.white),
-                label: const Text(
-                  "Keluar Akun",
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xff5f34e0),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 3,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
     );
   }
 
-  // ==================================
-  // REUSABLE WIDGET INFO CARD
-  // ==================================
   Widget _infoCard({
     required IconData icon,
     required String title,

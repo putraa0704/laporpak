@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import '../flutterViz_bottom_navigationBar_model.dart';
+import '../rt/rt_home.dart';
+import '../Date/datert.dart';
+import '../akun/akun_ketua.dart';
+import '../services/admin_rt_service.dart';
+import '../models/report_model.dart';
 
 class HistoryRT extends StatefulWidget {  
   const HistoryRT({super.key});
@@ -9,10 +14,20 @@ class HistoryRT extends StatefulWidget {
 }
 
 class _HistoryRTState extends State<HistoryRT> {  
-  String selectedTab = 'Dalam Proses';
-  int selectedIndex = 1;
+  String selectedTab = 'laporan';
+  int selectedIndex = 2;
+  bool isLoading = true;
+  List<ReportModel> reports = [];
 
-  final List<String> tabs = ["Semua", "Laporan", "Dalam Proses", "Selesai", "Dibatalkan"];
+  final List<String> tabs = ["semua", "laporan", "dalam_proses", "selesai"];
+  
+  final Map<String, String> tabLabels = {
+    "semua": "Semua",
+    "laporan": "Laporan",
+    "dalam_proses": "Dalam Proses",
+    "selesai": "Selesai",
+  };
+
   final List<FlutterVizBottomNavigationBarModel> navItems = [
     FlutterVizBottomNavigationBarModel(icon: Icons.home, label: "Home"),
     FlutterVizBottomNavigationBarModel(icon: Icons.calendar_today, label: "Date"),
@@ -20,7 +35,41 @@ class _HistoryRTState extends State<HistoryRT> {
     FlutterVizBottomNavigationBarModel(icon: Icons.account_circle, label: "Account"),
   ];
 
-  void _showPopupKonfirmasi(BuildContext context) {
+  @override
+  void initState() {
+    super.initState();
+    _loadReports();
+  }
+
+  Future<void> _loadReports() async {
+    setState(() => isLoading = true);
+
+    final result = await AdminRTService.getRTApprovalReports(
+      tab: selectedTab,
+    );
+
+    if (result['success']) {
+      final data = result['data'];
+      final List<dynamic> reportList = data['data'];
+      
+      setState(() {
+        reports = reportList.map((json) => ReportModel.fromJson(json)).toList();
+        isLoading = false;
+      });
+    } else {
+      setState(() => isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Gagal memuat laporan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showPopupKonfirmasi(BuildContext context, ReportModel report) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -30,9 +79,20 @@ class _HistoryRTState extends State<HistoryRT> {
           textAlign: TextAlign.center,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          "Apakah Anda yakin ingin mengkonfirmasi laporan ini?",
-          textAlign: TextAlign.center,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Apakah Anda yakin ingin mengkonfirmasi laporan \"${report.title}\"?",
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Status akan berubah menjadi Dalam Proses",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
         ),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
@@ -41,14 +101,9 @@ class _HistoryRTState extends State<HistoryRT> {
             child: const Text("Batal", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Laporan telah dikonfirmasi!"),
-                  backgroundColor: Color(0xff6f3dee),
-                ),
-              );
+              await _handleConfirm(report);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xff6f3dee),
@@ -63,7 +118,9 @@ class _HistoryRTState extends State<HistoryRT> {
     );
   }
 
-  void _showPopupSelesai(BuildContext context) {
+  void _showPopupSelesai(BuildContext context, ReportModel report) {
+    final TextEditingController notesController = TextEditingController();
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -73,9 +130,26 @@ class _HistoryRTState extends State<HistoryRT> {
           textAlign: TextAlign.center,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          "Apakah laporan ini sudah benar-benar selesai?",
-          textAlign: TextAlign.center,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Apakah laporan \"${report.title}\" sudah benar-benar selesai?",
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: notesController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: "Catatan penyelesaian (opsional)",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
         ),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
@@ -84,17 +158,12 @@ class _HistoryRTState extends State<HistoryRT> {
             child: const Text("Batal", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Laporan ditandai selesai!"),
-                  backgroundColor: Color(0xff6f3dee),
-                ),
-              );
+              await _handleComplete(report, notesController.text);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xff6f3dee),
+              backgroundColor: Colors.green,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -104,6 +173,117 @@ class _HistoryRTState extends State<HistoryRT> {
         ],
       ),
     );
+  }
+
+  Future<void> _handleConfirm(ReportModel report) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xff6f3dee)),
+      ),
+    );
+
+    final result = await AdminRTService.confirmReport(report.id);
+
+    if (mounted) {
+      Navigator.pop(context); // Close loading
+
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Laporan berhasil dikonfirmasi!"),
+            backgroundColor: Color(0xff6f3dee),
+          ),
+        );
+        _loadReports(); // Reload data
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Gagal konfirmasi laporan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleComplete(ReportModel report, String notes) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xff6f3dee)),
+      ),
+    );
+
+    final result = await AdminRTService.completeReport(
+      id: report.id,
+      notes: notes.isNotEmpty ? notes : null,
+    );
+
+    if (mounted) {
+      Navigator.pop(context); // Close loading
+
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Laporan berhasil diselesaikan!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadReports(); // Reload data
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Gagal menyelesaikan laporan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _onItemTapped(int index) {
+    if (index == selectedIndex) return;
+
+    Widget? nextPage;
+    switch (index) {
+      case 0:
+        nextPage = const HomeRt();
+        break;
+      case 1:
+        nextPage = const DateRT();
+        break;
+      case 2:
+        nextPage = const HistoryRT();
+        break;
+      case 3:
+        nextPage = ProfilKetua();
+        break;
+    }
+
+    if (nextPage != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => nextPage!),
+      );
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return const Color(0xff6f3dee);
+      case 'in_progress':
+        return Colors.orangeAccent;
+      case 'done':
+        return Colors.green;
+      case 'on_hold':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 
   @override
@@ -118,7 +298,7 @@ class _HistoryRTState extends State<HistoryRT> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          "Approvement",
+          "Approvement - RT",
           style: TextStyle(
             color: Colors.black87,
             fontWeight: FontWeight.bold,
@@ -126,183 +306,292 @@ class _HistoryRTState extends State<HistoryRT> {
           ),
         ),
         centerTitle: true,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: Icon(Icons.notifications_none, color: Colors.black87),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.black87),
+            onPressed: _loadReports,
           ),
         ],
       ),
 
-      // BODY
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 15),
+      body: Column(
+        children: [
+          const SizedBox(height: 15),
 
-            // Filter Tabs
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: tabs.map((tab) {
-                  final bool isActive = selectedTab == tab;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: GestureDetector(
-                      onTap: () => setState(() => selectedTab = tab),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isActive ? const Color(0xff6f3dee) : const Color(0xffebe7ff),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: isActive
-                              ? [
-                                  BoxShadow(
-                                    color: const Color(0xff6f3dee).withOpacity(0.3),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 3),
-                                  )
-                                ]
-                              : [],
-                        ),
-                        child: Text(
-                          tab,
-                          style: TextStyle(
-                            color: isActive ? Colors.white : Colors.black87,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
+          // Filter Tabs
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: tabs.map((tab) {
+                final bool isActive = selectedTab == tab;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => selectedTab = tab);
+                      _loadReports();
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isActive ? const Color(0xff6f3dee) : const Color(0xffebe7ff),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: isActive
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xff6f3dee).withOpacity(0.3),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                )
+                              ]
+                            : [],
+                      ),
+                      child: Text(
+                        tabLabels[tab]!,
+                        style: TextStyle(
+                          color: isActive ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
+                  ),
+                );
+              }).toList(),
             ),
+          ),
 
-            const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-            // Card Laporan
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                      child: Image.asset(
-                        'assets/illustration2.png',
-                        width: double.infinity,
-                        height: 200,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Jalan Lubang",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.black87,
+          // List Laporan
+          Expanded(
+            child: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xff6f3dee)),
+                  )
+                : reports.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.folder_open,
+                              size: 80,
+                              color: Colors.grey.shade400,
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            "Didepan Pos Satpam",
-                            style: TextStyle(color: Colors.black54, fontSize: 13),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: const [
-                              Icon(Icons.access_time, color: Color(0xff6f3dee), size: 16),
-                              SizedBox(width: 5),
-                              Text(
-                                "07:00 AM",
-                                style: TextStyle(
-                                  color: Color(0xff6f3dee),
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Tidak ada laporan',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 18),
-
-                          // 🔹 Ganti bagian radio & textfield jadi 2 tombol
-                          Center(
-                            child: Column(
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () => _showPopupKonfirmasi(context),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xff6f3dee),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 50, vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(25),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    "Konfirmasi",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                ElevatedButton(
-                                  onPressed: () => _showPopupSelesai(context),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 50, vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(25),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    "Selesaikan",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadReports,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: reports.length,
+                          itemBuilder: (context, index) {
+                            final report = reports[index];
+                            final statusColor = _getStatusColor(report.status);
 
-            const SizedBox(height: 40),
-          ],
-        ),
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  if (report.hasPhoto())
+                                    ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(16),
+                                      ),
+                                      child: Image.network(
+                                        report.getPhotoUrl('http://127.0.0.1:8000'),
+                                        width: double.infinity,
+                                        height: 200,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            height: 200,
+                                            color: Colors.grey.shade200,
+                                            child: const Icon(
+                                              Icons.image_not_supported,
+                                              size: 50,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(18),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                report.title,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 10,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: statusColor.withOpacity(0.2),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: Text(
+                                                report.getStatusLabel(),
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 10,
+                                                  color: statusColor,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          report.locationDescription,
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Dilaporkan oleh: ${report.getReporterName()}',
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.access_time,
+                                              color: Color(0xff6f3dee),
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              report.reportTime,
+                                              style: const TextStyle(
+                                                color: Color(0xff6f3dee),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 18),
+
+                                        // Action Buttons
+                                        Center(
+                                          child: Column(
+                                            children: [
+                                              // Tombol Konfirmasi (pending -> in_progress)
+                                              if (report.isPending())
+                                                ElevatedButton(
+                                                  onPressed: () =>
+                                                      _showPopupKonfirmasi(
+                                                          context, report),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor:
+                                                        const Color(0xff6f3dee),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 50,
+                                                      vertical: 12,
+                                                    ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(25),
+                                                    ),
+                                                  ),
+                                                  child: const Text(
+                                                    "Konfirmasi",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                ),
+                                              
+                                              // Tombol Selesaikan (any status -> done)
+                                              if (!report.isDone()) ...[
+                                                const SizedBox(height: 10),
+                                                ElevatedButton(
+                                                  onPressed: () =>
+                                                      _showPopupSelesai(
+                                                          context, report),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.green,
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 50,
+                                                      vertical: 12,
+                                                    ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(25),
+                                                    ),
+                                                  ),
+                                                  child: const Text(
+                                                    "Selesaikan",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+          ),
+
+          const SizedBox(height: 20),
+        ],
       ),
 
       // NAVIGATION BAR
@@ -325,16 +614,16 @@ class _HistoryRTState extends State<HistoryRT> {
             final item = navItems[index];
             final bool isSelected = index == selectedIndex;
             return GestureDetector(
-              onTap: () {
-                setState(() => selectedIndex = index);
-              },
+              onTap: () => _onItemTapped(index),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
                     item.icon,
-                    color: isSelected ? const Color(0xff6f3dee) : const Color(0xffb8a8f9),
+                    color: isSelected
+                        ? const Color(0xff6f3dee)
+                        : const Color(0xffb8a8f9),
                     size: 26,
                   ),
                   const SizedBox(height: 3),
@@ -343,7 +632,9 @@ class _HistoryRTState extends State<HistoryRT> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? const Color(0xff6f3dee) : const Color(0xffb8a8f9),
+                      color: isSelected
+                          ? const Color(0xff6f3dee)
+                          : const Color(0xffb8a8f9),
                     ),
                   ),
                 ],

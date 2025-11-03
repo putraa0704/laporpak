@@ -1,8 +1,11 @@
+// lib/Formulir/tambah.dart
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import '../flutterViz_bottom_navigationBar_model.dart';
+import '../services/report_service.dart';
 import 'package:flutter_application_1/Home/home.dart';
 import 'package:flutter_application_1/Date/date.dart';
 import 'package:flutter_application_1/history/history.dart';
@@ -16,13 +19,16 @@ class UploadKeluhan extends StatefulWidget {
 }
 
 class _UploadKeluhanPageState extends State<UploadKeluhan> {
+  final TextEditingController _judulController = TextEditingController();
   final TextEditingController _deskripsiController = TextEditingController();
   final TextEditingController _lokasiController = TextEditingController();
   DateTime? selectedDate;
+  TimeOfDay? selectedTime;
   XFile? _imageFile;
+  bool isLoading = false;
 
   final ImagePicker _picker = ImagePicker();
-  int selectedIndex = 2; // posisi default: Tambah
+  int selectedIndex = 2;
 
   final List<FlutterVizBottomNavigationBarModel> navItems = [
     FlutterVizBottomNavigationBarModel(icon: Icons.home, label: "Home"),
@@ -51,7 +57,123 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
     }
   }
 
-  // Navigasi antar halaman
+  Future<void> _pickTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: selectedTime ?? TimeOfDay.now(),
+    );
+    if (picked != null && picked != selectedTime) {
+      setState(() => selectedTime = picked);
+    }
+  }
+
+  Future<void> _submitReport() async {
+    // Validasi
+    if (_judulController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Judul laporan harus diisi'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_deskripsiController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Deskripsi keluhan harus diisi'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_lokasiController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lokasi harus diisi'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tanggal laporan harus dipilih'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Waktu laporan harus dipilih'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      // Format tanggal dan waktu
+      final dateFormat = DateFormat('yyyy-MM-dd');
+      final timeFormat = '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}';
+
+      File? photoFile;
+      if (_imageFile != null && !kIsWeb) {
+        photoFile = File(_imageFile!.path);
+      }
+
+      final result = await ReportService.createReport(
+        title: _judulController.text,
+        complaintDescription: _deskripsiController.text,
+        locationDescription: _lokasiController.text,
+        reportDate: dateFormat.format(selectedDate!),
+        reportTime: timeFormat,
+        photo: photoFile,
+      );
+
+      setState(() => isLoading = false);
+
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Laporan berhasil dibuat!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HistoryLaporan()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Gagal membuat laporan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _onNavItemTapped(int index) {
     if (index == selectedIndex) return;
 
@@ -84,8 +206,6 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       backgroundColor: const Color(0xfff7f7f7),
       appBar: AppBar(
@@ -111,11 +231,39 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
           )
         ],
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: Column(
           children: [
+            // Judul Laporan
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _judulController,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  labelText: "Judul Laporan",
+                  hintText: "Contoh: Jalan Berlubang",
+                  labelStyle: TextStyle(color: Colors.black54, fontSize: 13),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            // Upload Foto
             GestureDetector(
               onTap: _pickImage,
               child: Container(
@@ -175,47 +323,86 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
 
             const SizedBox(height: 18),
 
-            GestureDetector(
-              onTap: () => _pickDate(context),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_today_outlined,
-                        color: Color(0xff5f34e0), size: 22),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        selectedDate == null
-                            ? "Tanggal - Bulan - Tahun"
-                            : "${selectedDate!.day}-${selectedDate!.month}-${selectedDate!.year}",
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 14,
-                        ),
+            // Tanggal dan Waktu
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _pickDate(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Tanggal",
+                            style: TextStyle(fontSize: 12, color: Colors.black54),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            selectedDate == null
+                                ? "Pilih tanggal"
+                                : DateFormat('dd/MM/yyyy').format(selectedDate!),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ],
                       ),
                     ),
-                    const Icon(Icons.keyboard_arrow_down_rounded,
-                        color: Colors.black45),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _pickTime(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Waktu",
+                            style: TextStyle(fontSize: 12, color: Colors.black54),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            selectedTime == null
+                                ? "Pilih waktu"
+                                : selectedTime!.format(context),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 18),
 
+            // Deskripsi Keluhan
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -236,7 +423,7 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
                 decoration: const InputDecoration(
                   border: InputBorder.none,
                   labelText: "Deskripsi Keluhan",
-                  hintText: "Isi Deskripsi Keluhan...",
+                  hintText: "Jelaskan keluhan Anda...",
                   labelStyle: TextStyle(color: Colors.black54, fontSize: 13),
                 ),
               ),
@@ -244,6 +431,7 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
 
             const SizedBox(height: 18),
 
+            // Deskripsi Lokasi
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -264,64 +452,19 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
                 decoration: const InputDecoration(
                   border: InputBorder.none,
                   labelText: "Deskripsi Lokasi",
-                  hintText: "Isi Lokasi...",
+                  hintText: "Contoh: Didepan Pos Satpam Blok A",
                   labelStyle: TextStyle(color: Colors.black54, fontSize: 13),
                 ),
               ),
             ),
 
-            const SizedBox(height: 18),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 20,
-                    backgroundImage: AssetImage('assets/illustration2.png'),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    "Pak Udin",
-                    style: TextStyle(
-                      color: const Color(0xff5f34e0),
-                      fontWeight: FontWeight.bold,
-                      fontSize: screenWidth < 400 ? 13 : 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
             const SizedBox(height: 30),
 
-            // Tombol Tambah Keluhan
+            // Tombol Submit
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Keluhan berhasil ditambahkan!")),
-                  );
-                  Future.delayed(const Duration(milliseconds: 800), () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HistoryLaporan()),
-                    );
-                  });
-                },
+                onPressed: isLoading ? null : _submitReport,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xff5f34e0),
                   padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 25),
@@ -330,14 +473,23 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
                   ),
                   elevation: 4,
                 ),
-                child: const Text(
-                  "Tambah Keluhan",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        "Tambah Keluhan",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
 
@@ -345,10 +497,6 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
           ],
         ),
       ),
-
-      // =====================================================
-      // ✅ Bottom Navigation (sama persis seperti DatePage)
-      // =====================================================
       bottomNavigationBar: BottomNavigationBar(
         items: navItems
             .map((e) => BottomNavigationBarItem(

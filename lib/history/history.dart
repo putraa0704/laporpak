@@ -1,7 +1,8 @@
+// lib/history/history.dart
 import 'package:flutter/material.dart';
 import '../flutterViz_bottom_navigationBar_model.dart';
-
-// 🔹 Import halaman lain
+import '../services/report_service.dart';
+import '../models/report_model.dart';
 import '../Home/home.dart';
 import '../Date/date.dart';
 import '../Formulir/tambah.dart';
@@ -16,33 +17,17 @@ class HistoryLaporan extends StatefulWidget {
 
 class _HistoryLaporanPageState extends State<HistoryLaporan> {
   int _selectedIndex = 3;
-  String selectedFilter = "All";
+  String selectedFilter = "all";
+  bool isLoading = true;
+  List<ReportModel> reports = [];
 
-  final List<Map<String, dynamic>> laporanList = [
-    {
-      "judul": "Jalan Lubang",
-      "lokasi": "Didepan Pos Satpam",
-      "jam": "07:00 AM",
-      "status": "Dalam Proses",
-      "image": "assets/jalan_lubang.png",
-    },
-    {
-      "judul": "Lampu Mati",
-      "lokasi": "Disamping Balai RT",
-      "jam": "07:00 AM",
-      "status": "Terkirim",
-      "image": "assets/lampu_mati.png",
-    },
-    {
-      "judul": "Jalan Lampu Mati",
-      "lokasi": "Didepan Blok A-2",
-      "jam": "07:00 AM",
-      "status": "Selesai",
-      "image": "assets/lampu_selesai.png",
-    },
-  ];
-
-  final List<String> filters = ["All", "Terkirim", "Dalam Proses", "Selesai"];
+  final List<String> filters = ["all", "pending", "in_progress", "done"];
+  final Map<String, String> filterLabels = {
+    "all": "Semua",
+    "pending": "Menunggu",
+    "in_progress": "Dalam Proses",
+    "done": "Selesai",
+  };
 
   final List<FlutterVizBottomNavigationBarModel> navItems = [
     FlutterVizBottomNavigationBarModel(icon: Icons.home, label: "Home"),
@@ -52,7 +37,39 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
     FlutterVizBottomNavigationBarModel(icon: Icons.account_circle, label: "Account"),
   ];
 
-  // 🔹 Navigasi antar halaman (disamakan dengan semua halaman lain)
+  @override
+  void initState() {
+    super.initState();
+    _loadReports();
+  }
+
+  Future<void> _loadReports() async {
+    setState(() => isLoading = true);
+
+    final result = await ReportService.getReports(
+      status: selectedFilter == "all" ? null : selectedFilter,
+      myReports: true, // hanya laporan user sendiri
+    );
+
+    if (result['success']) {
+      final data = result['data'];
+      final List<dynamic> reportList = data['data']; // pagination data
+      
+      setState(() {
+        reports = reportList.map((json) => ReportModel.fromJson(json)).toList();
+        isLoading = false;
+      });
+    } else {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Gagal memuat laporan'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
 
@@ -83,16 +100,25 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
     }
   }
 
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return const Color(0xff5f34e0);
+      case 'in_progress':
+        return Colors.orangeAccent;
+      case 'done':
+        return Colors.green;
+      case 'on_hold':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final filteredList = selectedFilter == "All"
-        ? laporanList
-        : laporanList.where((item) => item["status"] == selectedFilter).toList();
-
     return Scaffold(
       backgroundColor: const Color(0xfff7f7f7),
-
-      // ========================== APP BAR ==========================
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 2,
@@ -109,42 +135,64 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
           ),
         ),
         centerTitle: true,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 15),
-            child: Icon(Icons.notifications_none, color: Color(0xff5f34e0)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xff5f34e0)),
+            onPressed: _loadReports,
           ),
         ],
       ),
-
-      // ========================== BODY ==========================
       body: Column(
         children: [
           const SizedBox(height: 12),
           _buildFilterBar(),
           const SizedBox(height: 10),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              itemCount: filteredList.length,
-              itemBuilder: (context, index) {
-                final item = filteredList[index];
-                return _buildReportCard(item);
-              },
-            ),
+            child: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xff5f34e0)),
+                  )
+                : reports.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.folder_open,
+                              size: 80,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Belum ada laporan',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadReports,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          itemCount: reports.length,
+                          itemBuilder: (context, index) {
+                            final report = reports[index];
+                            return _buildReportCard(report);
+                          },
+                        ),
+                      ),
           ),
         ],
       ),
-
-      // ========================== ✅ BOTTOM NAVBAR (FINAL VERSION) ==========================
       bottomNavigationBar: BottomNavigationBar(
         items: navItems
-            .map(
-              (item) => BottomNavigationBarItem(
-                icon: Icon(item.icon),
-                label: item.label,
-              ),
-            )
+            .map((item) => BottomNavigationBarItem(
+                  icon: Icon(item.icon),
+                  label: item.label,
+                ))
             .toList(),
         currentIndex: _selectedIndex,
         backgroundColor: Colors.white,
@@ -162,7 +210,6 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
     );
   }
 
-  // ========================== FILTER BAR ==========================
   Widget _buildFilterBar() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -171,7 +218,10 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
         children: filters.map((filter) {
           final isSelected = selectedFilter == filter;
           return GestureDetector(
-            onTap: () => setState(() => selectedFilter = filter),
+            onTap: () {
+              setState(() => selectedFilter = filter);
+              _loadReports();
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               margin: const EdgeInsets.symmetric(horizontal: 6),
@@ -194,7 +244,7 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
                     : [],
               ),
               child: Text(
-                filter,
+                filterLabels[filter]!,
                 style: TextStyle(
                   color: isSelected ? Colors.white : Colors.black87,
                   fontWeight: FontWeight.w600,
@@ -208,22 +258,8 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
     );
   }
 
-  // ========================== KARTU LAPORAN ==========================
-  Widget _buildReportCard(Map<String, dynamic> item) {
-    Color statusColor;
-    switch (item["status"]) {
-      case "Terkirim":
-        statusColor = const Color(0xff5f34e0);
-        break;
-      case "Dalam Proses":
-        statusColor = Colors.orangeAccent;
-        break;
-      case "Selesai":
-        statusColor = Colors.green;
-        break;
-      default:
-        statusColor = Colors.grey;
-    }
+  Widget _buildReportCard(ReportModel report) {
+    final statusColor = _getStatusColor(report.status);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -241,18 +277,26 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
+          if (report.photo != null)
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+              child: Image.network(
+                report.getPhotoUrl('https://coltishly-momentous-gabrielle.ngrok-free.dev'),
+                width: double.infinity,
+                height: 170,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 170,
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.image_not_supported, size: 50),
+                  );
+                },
+              ),
             ),
-            child: Image.asset(
-              item["image"],
-              width: double.infinity,
-              height: 170,
-              fit: BoxFit.cover,
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
@@ -263,7 +307,7 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item["judul"],
+                        report.title,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -272,11 +316,13 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        item["lokasi"],
+                        report.locationDescription,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.black54,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
                       Row(
@@ -285,7 +331,7 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
                               size: 13, color: Color(0xff5f34e0)),
                           const SizedBox(width: 4),
                           Text(
-                            item["jam"],
+                            report.reportTime,
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.black54,
@@ -304,7 +350,7 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
                     border: Border.all(color: statusColor.withOpacity(0.4)),
                   ),
                   child: Text(
-                    item["status"],
+                    report.getStatusLabel(),
                     style: TextStyle(
                       color: statusColor,
                       fontWeight: FontWeight.w600,

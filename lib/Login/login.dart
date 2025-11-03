@@ -1,4 +1,7 @@
+// lib/Login/login.dart
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import '../models/user_model.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -8,16 +11,97 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  final TextEditingController namaController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
   String? selectedRole;
   bool setuju = false;
   bool passwordVisible = false;
+  bool isLoading = false;
 
-  // ✅ Tambahkan "Admin" tanpa ubah desain
-  final List<String> roles = ["Ketua RT", "Warga", "Admin"];
+  final List<String> roles = ["rt", "warga", "admin"];
+  final Map<String, String> roleLabels = {
+    "rt": "Ketua RT",
+    "warga": "Warga",
+    "admin": "Admin",
+  };
+
+  Future<void> _handleLogin() async {
+    if (!setuju || selectedRole == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mohon setujui persyaratan dan pilih peran'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final result = await AuthService.login(
+        email: emailController.text,
+        password: passwordController.text,
+      );
+
+      setState(() => isLoading = false);
+
+      if (result['success']) {
+        final userData = result['data']['user'];
+        final user = UserModel.fromJson(userData);
+
+        // Cek role sesuai dengan pilihan
+        if (user.role != selectedRole) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Role tidak sesuai! Anda login sebagai ${roleLabels[user.role]}'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Selamat datang, ${user.name}!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigasi sesuai role
+        if (!mounted) return;
+        switch (user.role) {
+          case 'rt':
+            Navigator.pushReplacementNamed(context, '/rt_home');
+            break;
+          case 'warga':
+            Navigator.pushReplacementNamed(context, '/home');
+            break;
+          case 'admin':
+            Navigator.pushReplacementNamed(context, '/home_admin');
+            break;
+          default:
+            Navigator.pushReplacementNamed(context, '/home');
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Login gagal'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +148,7 @@ class _LoginState extends State<Login> {
               ),
               const SizedBox(height: 16),
 
-              // Password (dengan toggle 👁️)
+              // Password
               TextField(
                 controller: passwordController,
                 obscureText: !passwordVisible,
@@ -74,19 +158,14 @@ class _LoginState extends State<Login> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  prefixIcon:
-                      const Icon(Icons.lock, color: Color(0xff6135e1)),
+                  prefixIcon: const Icon(Icons.lock, color: Color(0xff6135e1)),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      passwordVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+                      passwordVisible ? Icons.visibility : Icons.visibility_off,
                       color: const Color(0xff6135e1),
                     ),
                     onPressed: () {
-                      setState(() {
-                        passwordVisible = !passwordVisible;
-                      });
+                      setState(() => passwordVisible = !passwordVisible);
                     },
                   ),
                 ),
@@ -111,7 +190,7 @@ class _LoginState extends State<Login> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(role),
+                            Text(roleLabels[role]!),
                             const Text(
                               "Pilih",
                               style: TextStyle(color: Color(0xff6135e1)),
@@ -121,9 +200,7 @@ class _LoginState extends State<Login> {
                       );
                     }).toList(),
                     onChanged: (value) {
-                      setState(() {
-                        selectedRole = value;
-                      });
+                      setState(() => selectedRole = value);
                     },
                   ),
                 ),
@@ -137,9 +214,7 @@ class _LoginState extends State<Login> {
                   Checkbox(
                     value: setuju,
                     onChanged: (value) {
-                      setState(() {
-                        setuju = value ?? false;
-                      });
+                      setState(() => setuju = value ?? false);
                     },
                     activeColor: const Color(0xff5e31e2),
                   ),
@@ -159,39 +234,33 @@ class _LoginState extends State<Login> {
                 height: 45,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        setuju ? const Color(0xff6236e6) : Colors.grey.shade400,
+                    backgroundColor: setuju && selectedRole != null
+                        ? const Color(0xff6236e6)
+                        : Colors.grey.shade400,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: setuju && selectedRole != null
-                      ? () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  "Masuk sebagai ${selectedRole!} berhasil!"),
-                            ),
-                          );
-
-                          // 🟢 Navigasi sesuai role
-                          if (selectedRole == "Ketua RT") {
-                            Navigator.pushNamed(context, '/rt_home');
-                          } else if (selectedRole == "Warga") {
-                            Navigator.pushNamed(context, '/home');
-                          } else if (selectedRole == "Admin") {
-                            Navigator.pushNamed(context, '/home_admin');
-                          }
-                        }
+                  onPressed: (setuju && selectedRole != null && !isLoading)
+                      ? _handleLogin
                       : null,
-                  child: const Text(
-                    "Masuk",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          "Masuk",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 20),

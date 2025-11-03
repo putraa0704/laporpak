@@ -1,9 +1,13 @@
+// lib/Date/date.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../flutterViz_bottom_navigationBar_model.dart';
+import '../services/report_service.dart';
+import '../models/report_model.dart';
 import '../Home/home.dart';
 import '../Formulir/tambah.dart';
-import '../history/history.dart';
-import '../akun/akun.dart';
+import '../History/history.dart';
+import '../Akun/akun.dart';
 
 class DatePage extends StatefulWidget {
   const DatePage({super.key});
@@ -21,40 +25,72 @@ class _DatePageState extends State<DatePage> {
     FlutterVizBottomNavigationBarModel(icon: Icons.account_circle, label: "Account")
   ];
 
-  int _selectedIndex = 1; // posisi default halaman Date
+  int _selectedIndex = 1;
   DateTime _selectedDate = DateTime.now();
+  String selectedFilter = "all";
+  bool isLoading = true;
+  List<ReportModel> allReports = [];
+  List<ReportModel> filteredReports = [];
 
-  final List<Map<String, dynamic>> _reports = [
-    {
-      'title': 'Lampu Jalan Mati',
-      'location': 'Didepan Blok A-2',
-      'time': '18.00 PM',
-      'status': 'In Progress',
-      'statusColor': const Color(0xff8c6bed),
-      'icon': Icons.shopping_bag_outlined,
-      'iconColor': const Color(0xff5f34e0),
-    },
-    {
-      'title': 'Jalan Lubang',
-      'location': 'Didepan Pos Satpam',
-      'time': '07:00 AM',
-      'status': 'On Hold',
-      'statusColor': const Color(0xfff7c3c3),
-      'icon': Icons.access_time_outlined,
-      'iconColor': Colors.red,
-    },
-    {
-      'title': 'Lampu Pos Satpam Mati',
-      'location': 'Disamping pos satpam',
-      'time': '07:00 PM',
-      'status': 'Selesai',
-      'statusColor': const Color(0xffc3f7d1),
-      'icon': Icons.check_circle_outline,
-      'iconColor': Colors.green,
-    },
-  ];
+  final List<String> filters = ["all", "pending", "in_progress", "done"];
+  final Map<String, String> filterLabels = {
+    "all": "Semua",
+    "pending": "Menunggu",
+    "in_progress": "Dalam Proses",
+    "done": "Selesai",
+  };
 
-  // ✅ Navigasi antar halaman (pakai switch widget)
+  @override
+  void initState() {
+    super.initState();
+    _loadReports();
+  }
+
+  Future<void> _loadReports() async {
+    setState(() => isLoading = true);
+
+    final result = await ReportService.getReports(
+      myReports: true, // hanya laporan user sendiri
+    );
+
+    if (result['success']) {
+      final data = result['data'];
+      final List<dynamic> reportList = data['data'];
+      
+      setState(() {
+        allReports = reportList.map((json) => ReportModel.fromJson(json)).toList();
+        _filterReports();
+        isLoading = false;
+      });
+    } else {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Gagal memuat laporan'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _filterReports() {
+    setState(() {
+      // Filter berdasarkan tanggal yang dipilih
+      filteredReports = allReports.where((report) {
+        final reportDate = DateFormat('yyyy-MM-dd').parse(report.reportDate);
+        final isSameDate = reportDate.year == _selectedDate.year &&
+                          reportDate.month == _selectedDate.month &&
+                          reportDate.day == _selectedDate.day;
+        
+        if (selectedFilter == "all") {
+          return isSameDate;
+        } else {
+          return isSameDate && report.status == selectedFilter;
+        }
+      }).toList();
+    });
+  }
+
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
 
@@ -85,10 +121,23 @@ class _DatePageState extends State<DatePage> {
     }
   }
 
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return const Color(0xff5f34e0);
+      case 'in_progress':
+        return Colors.orangeAccent;
+      case 'done':
+        return Colors.green;
+      case 'on_hold':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       backgroundColor: const Color(0xffffffff),
       appBar: AppBar(
@@ -105,8 +154,11 @@ class _DatePageState extends State<DatePage> {
           ),
         ),
         leading: const Icon(Icons.menu, color: Colors.white, size: 24),
-        actions: const [
-          Icon(Icons.notifications, color: Colors.white, size: 24),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _loadReports,
+          ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -124,7 +176,7 @@ class _DatePageState extends State<DatePage> {
         showSelectedLabels: true,
         showUnselectedLabels: false,
         type: BottomNavigationBarType.fixed,
-        onTap: _onItemTapped, // ✅ ganti dari kosong ke fungsi navigasi
+        onTap: _onItemTapped,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -174,15 +226,15 @@ class _DatePageState extends State<DatePage> {
                       onDateChanged: (date) {
                         setState(() {
                           _selectedDate = date;
+                          _filterReports();
                         });
-                        debugPrint('Tanggal dipilih: $_selectedDate');
                       },
                     ),
 
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: Text(
-                        "Tanggal Hari Ini: ${_selectedDate.day}-${_selectedDate.month}-${_selectedDate.year}",
+                        "Tanggal Hari Ini: ${DateFormat('dd-MM-yyyy').format(_selectedDate)}",
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           color: Color(0xff5f34e0),
@@ -196,33 +248,69 @@ class _DatePageState extends State<DatePage> {
 
             const SizedBox(height: 16),
 
+            // Filter buttons
             SizedBox(
               height: 40,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                children: [
-                  _buildFilterButton(label: "All", isSelected: true),
-                  _buildFilterButton(label: "On Hold", isSelected: false),
-                  _buildFilterButton(label: "In Progress", isSelected: false),
-                  _buildFilterButton(label: "Done", isSelected: false),
-                ],
+                children: filters.map((filter) {
+                  final isSelected = selectedFilter == filter;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: MaterialButton(
+                      onPressed: () {
+                        setState(() {
+                          selectedFilter = filter;
+                          _filterReports();
+                        });
+                      },
+                      color: isSelected ? const Color(0xff5f34e0) : const Color(0xff5f34e0).withOpacity(0.1),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
+                      child: Text(
+                        filterLabels[filter]!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected ? Colors.white : const Color(0xff5f34e0),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
 
             const SizedBox(height: 16),
-            ..._reports.map((report) {
-              return _buildReportCard(
-                screenWidth,
-                report['title'],
-                report['location'],
-                report['time'],
-                report['status'],
-                report['statusColor'],
-                report['icon'],
-                report['iconColor'],
-              );
-            }).toList(),
+
+            // List laporan
+            if (isLoading)
+              const Padding(
+                padding: EdgeInsets.all(32.0),
+                child: CircularProgressIndicator(color: Color(0xff5f34e0)),
+              )
+            else if (filteredReports.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  children: [
+                    Icon(Icons.event_busy, size: 64, color: Colors.grey.shade400),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Tidak ada laporan pada tanggal ini',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...filteredReports.map((report) {
+                return _buildReportCard(report);
+              }).toList(),
 
             const SizedBox(height: 50),
           ],
@@ -231,40 +319,9 @@ class _DatePageState extends State<DatePage> {
     );
   }
 
-  Widget _buildFilterButton({required String label, required bool isSelected}) {
-    const Color purple = Color(0xff5f34e0);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      child: MaterialButton(
-        onPressed: () {},
-        color: isSelected ? purple : purple.withOpacity(0.1),
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.0),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : purple,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildReportCard(ReportModel report) {
+    final statusColor = _getStatusColor(report.status);
 
-  Widget _buildReportCard(
-    double screenWidth,
-    String title,
-    String location,
-    String time,
-    String status,
-    Color statusColor,
-    IconData icon,
-    Color iconColor,
-  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0, left: 16.0, right: 16.0),
       child: Container(
@@ -288,27 +345,33 @@ class _DatePageState extends State<DatePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.black87,
+                Expanded(
+                  child: Text(
+                    report.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: statusColor,
+                    color: statusColor.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 16, color: iconColor),
+                  child: Icon(
+                    report.isDone() ? Icons.check_circle_outline : Icons.access_time_outlined,
+                    size: 16,
+                    color: statusColor,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              location,
+              report.locationDescription,
               style: const TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
@@ -323,7 +386,7 @@ class _DatePageState extends State<DatePage> {
                     const Icon(Icons.access_time, size: 14, color: Colors.grey),
                     const SizedBox(width: 4),
                     Text(
-                      time,
+                      report.reportTime,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
@@ -335,17 +398,15 @@ class _DatePageState extends State<DatePage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: statusColor,
+                    color: statusColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    status,
+                    report.getStatusLabel(),
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 10,
-                      color: (status == 'On Hold' || status == 'Selesai')
-                          ? Colors.black
-                          : Colors.white,
+                      color: statusColor,
                     ),
                   ),
                 ),

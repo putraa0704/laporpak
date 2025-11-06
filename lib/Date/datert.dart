@@ -6,6 +6,7 @@ import '../history/historyrt.dart';
 import '../akun/akun_ketua.dart';
 import '../services/admin_rt_service.dart';
 import '../models/report_model.dart';
+import '../widgets/custom_calendar.dart';
 
 class DateRT extends StatefulWidget {
   const DateRT({super.key});
@@ -15,11 +16,21 @@ class DateRT extends StatefulWidget {
 }
 
 class _DateRTState extends State<DateRT> {
-  final List<FlutterVizBottomNavigationBarModel> flutterVizBottomNavigationBarItems = [
+  final List<FlutterVizBottomNavigationBarModel>
+  flutterVizBottomNavigationBarItems = [
     FlutterVizBottomNavigationBarModel(icon: Icons.home, label: "Home"),
-    FlutterVizBottomNavigationBarModel(icon: Icons.calendar_today, label: "Date"),
-    FlutterVizBottomNavigationBarModel(icon: Icons.description, label: "History"),
-    FlutterVizBottomNavigationBarModel(icon: Icons.account_circle, label: "Account")
+    FlutterVizBottomNavigationBarModel(
+      icon: Icons.calendar_today,
+      label: "Date",
+    ),
+    FlutterVizBottomNavigationBarModel(
+      icon: Icons.description,
+      label: "History",
+    ),
+    FlutterVizBottomNavigationBarModel(
+      icon: Icons.account_circle,
+      label: "Account",
+    ),
   ];
 
   int _selectedIndex = 1;
@@ -29,7 +40,13 @@ class _DateRTState extends State<DateRT> {
   List<ReportModel> allReports = [];
   List<ReportModel> filteredReports = [];
 
-  final List<String> filters = ["all", "pending", "in_progress", "done", "on_hold"];
+  final List<String> filters = [
+    "all",
+    "pending",
+    "in_progress",
+    "done",
+    "on_hold",
+  ];
   final Map<String, String> filterLabels = {
     "all": "Semua",
     "pending": "Menunggu",
@@ -55,7 +72,7 @@ class _DateRTState extends State<DateRT> {
     if (result['success']) {
       final Map<String, dynamic> groupedData = result['data'];
       List<ReportModel> reports = [];
-      
+
       groupedData.forEach((date, reportList) {
         for (var json in reportList) {
           reports.add(ReportModel.fromJson(json));
@@ -82,18 +99,22 @@ class _DateRTState extends State<DateRT> {
 
   void _filterReports() {
     setState(() {
-      filteredReports = allReports.where((report) {
-        final reportDate = DateFormat('yyyy-MM-dd').parse(report.reportDate);
-        final isSameDate = reportDate.year == _selectedDate.year &&
-                          reportDate.month == _selectedDate.month &&
-                          reportDate.day == _selectedDate.day;
-        
-        if (selectedFilter == "all") {
-          return isSameDate;
-        } else {
-          return isSameDate && report.status == selectedFilter;
-        }
-      }).toList();
+      filteredReports =
+          allReports.where((report) {
+            final reportDate = DateFormat(
+              'yyyy-MM-dd',
+            ).parse(report.reportDate);
+            final isSameDate =
+                reportDate.year == _selectedDate.year &&
+                reportDate.month == _selectedDate.month &&
+                reportDate.day == _selectedDate.day;
+
+            if (selectedFilter == "all") {
+              return isSameDate;
+            } else {
+              return isSameDate && report.status == selectedFilter;
+            }
+          }).toList();
     });
   }
 
@@ -158,7 +179,13 @@ class _DateRTState extends State<DateRT> {
             color: Colors.white,
           ),
         ),
-        leading: const Icon(Icons.menu, color: Colors.white, size: 24),
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset(
+            'assets/lapor_pak.png', // Pastikan file logo ada
+            fit: BoxFit.contain,
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
@@ -167,9 +194,15 @@ class _DateRTState extends State<DateRT> {
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: flutterVizBottomNavigationBarItems
-            .map((e) => BottomNavigationBarItem(icon: Icon(e.icon), label: e.label))
-            .toList(),
+        items:
+            flutterVizBottomNavigationBarItems
+                .map(
+                  (e) => BottomNavigationBarItem(
+                    icon: Icon(e.icon),
+                    label: e.label,
+                  ),
+                )
+                .toList(),
         backgroundColor: Colors.white,
         currentIndex: _selectedIndex,
         elevation: 8,
@@ -209,7 +242,11 @@ class _DateRTState extends State<DateRT> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.calendar_today, color: Color(0xff5f34e0), size: 18),
+                          Icon(
+                            Icons.calendar_today,
+                            color: Color(0xff5f34e0),
+                            size: 18,
+                          ),
                           SizedBox(width: 6),
                           Text(
                             "Kalender Pengaduan",
@@ -224,16 +261,17 @@ class _DateRTState extends State<DateRT> {
                     ),
                     const Divider(height: 1, thickness: 1),
 
-                    CalendarDatePicker(
-                      initialDate: _selectedDate,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2050),
+                    CustomCalendar(
+                      selectedDate: _selectedDate,
                       onDateChanged: (date) {
+                        final oldMonth = _selectedDate.month;
+                        final oldYear = _selectedDate.year;
+
                         setState(() {
                           _selectedDate = date;
                         });
-                        // Reload data jika bulan berbeda
-                        if (date.month != _selectedDate.month || date.year != _selectedDate.year) {
+
+                        if (date.month != oldMonth || date.year != oldYear) {
                           _loadReports();
                         } else {
                           _filterReports();
@@ -263,34 +301,44 @@ class _DateRTState extends State<DateRT> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                children: filters.map((filter) {
-                  final isSelected = selectedFilter == filter;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: MaterialButton(
-                      onPressed: () {
-                        setState(() {
-                          selectedFilter = filter;
-                          _filterReports();
-                        });
-                      },
-                      color: isSelected ? const Color(0xff5f34e0) : const Color(0xff5f34e0).withOpacity(0.1),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
-                      child: Text(
-                        filterLabels[filter]!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white : const Color(0xff5f34e0),
+                children:
+                    filters.map((filter) {
+                      final isSelected = selectedFilter == filter;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: MaterialButton(
+                          onPressed: () {
+                            setState(() {
+                              selectedFilter = filter;
+                              _filterReports();
+                            });
+                          },
+                          color:
+                              isSelected
+                                  ? const Color(0xff5f34e0)
+                                  : const Color(0xff5f34e0).withOpacity(0.1),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20.0),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 5,
+                            horizontal: 15,
+                          ),
+                          child: Text(
+                            filterLabels[filter]!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color:
+                                  isSelected
+                                      ? Colors.white
+                                      : const Color(0xff5f34e0),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                }).toList(),
+                      );
+                    }).toList(),
               ),
             ),
 
@@ -306,7 +354,11 @@ class _DateRTState extends State<DateRT> {
                 padding: const EdgeInsets.all(32.0),
                 child: Column(
                   children: [
-                    Icon(Icons.event_busy, size: 64, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.event_busy,
+                      size: 64,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       'Tidak ada laporan pada tanggal ini',
@@ -370,7 +422,9 @@ class _DateRTState extends State<DateRT> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    report.isDone() ? Icons.check_circle_outline : Icons.access_time_outlined,
+                    report.isDone()
+                        ? Icons.check_circle_outline
+                        : Icons.access_time_outlined,
                     size: 16,
                     color: statusColor,
                   ),
@@ -380,18 +434,12 @@ class _DateRTState extends State<DateRT> {
             const SizedBox(height: 4),
             Text(
               report.locationDescription,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 4),
             Text(
               'Dilaporkan oleh: ${report.getReporterName()}',
-              style: const TextStyle(
-                fontSize: 11,
-                color: Colors.black54,
-              ),
+              style: const TextStyle(fontSize: 11, color: Colors.black54),
             ),
             const SizedBox(height: 8),
             Row(
@@ -412,7 +460,10 @@ class _DateRTState extends State<DateRT> {
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(10),

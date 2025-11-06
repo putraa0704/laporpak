@@ -23,7 +23,7 @@ class _HistoryRTState extends State<HistoryRT> {
   
   final Map<String, String> tabLabels = {
     "semua": "Semua",
-    "laporan": "Laporan",
+    "laporan": "Laporan Baru",
     "dalam_proses": "Dalam Proses",
     "selesai": "Selesai",
   };
@@ -70,12 +70,14 @@ class _HistoryRTState extends State<HistoryRT> {
   }
 
   void _showPopupKonfirmasi(BuildContext context, ReportModel report) {
+    final TextEditingController notesController = TextEditingController();
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          "Konfirmasi Validasi",
+          'Konfirmasi & Rekomendasikan',
           textAlign: TextAlign.center,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
@@ -88,61 +90,16 @@ class _HistoryRTState extends State<HistoryRT> {
             ),
             const SizedBox(height: 8),
             Text(
-              "Status akan berubah menjadi Dalam Proses",
+              "Laporan akan direkomendasikan ke Admin untuk ditindaklanjuti",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-          ],
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _handleConfirm(report);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xff6f3dee),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text("Ya, Konfirmasi"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPopupSelesai(BuildContext context, ReportModel report) {
-    final TextEditingController notesController = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          "Tandai Selesai",
-          textAlign: TextAlign.center,
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "Apakah laporan \"${report.title}\" sudah benar-benar selesai?",
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             TextField(
               controller: notesController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: "Catatan penyelesaian (opsional)",
+                hintText: "Catatan (opsional)",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -160,22 +117,88 @@ class _HistoryRTState extends State<HistoryRT> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _handleComplete(report, notesController.text);
+              await _handleConfirm(report, notesController.text);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
+              backgroundColor: const Color(0xff6f3dee),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text("Ya, Selesai"),
+            child: const Text("Ya, Konfirmasi"),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _handleConfirm(ReportModel report) async {
+  void _showPopupTolak(BuildContext context, ReportModel report) {
+    final TextEditingController reasonController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Tolak Laporan',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Apakah Anda yakin ingin menolak laporan \"${report.title}\"?",
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: "Alasan penolakan (wajib)",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (reasonController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Alasan penolakan harus diisi'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(context);
+              await _handleReject(report, reasonController.text);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text("Ya, Tolak"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleConfirm(ReportModel report, String notes) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -184,7 +207,10 @@ class _HistoryRTState extends State<HistoryRT> {
       ),
     );
 
-    final result = await AdminRTService.confirmReport(report.id);
+    final result = await AdminRTService.confirmAndRecommend(
+      id: report.id,
+      notes: notes.isNotEmpty ? notes : null,
+    );
 
     if (mounted) {
       Navigator.pop(context); // Close loading
@@ -192,7 +218,7 @@ class _HistoryRTState extends State<HistoryRT> {
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Laporan berhasil dikonfirmasi!"),
+            content: Text("Laporan berhasil direkomendasikan ke Admin!"),
             backgroundColor: Color(0xff6f3dee),
           ),
         );
@@ -208,18 +234,18 @@ class _HistoryRTState extends State<HistoryRT> {
     }
   }
 
-  Future<void> _handleComplete(ReportModel report, String notes) async {
+  Future<void> _handleReject(ReportModel report, String reason) async {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Color(0xff6f3dee)),
+        child: CircularProgressIndicator(color: Colors.red),
       ),
     );
 
-    final result = await AdminRTService.completeReport(
+    final result = await AdminRTService.rejectReport(
       id: report.id,
-      notes: notes.isNotEmpty ? notes : null,
+      reason: reason,
     );
 
     if (mounted) {
@@ -228,15 +254,15 @@ class _HistoryRTState extends State<HistoryRT> {
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Laporan berhasil diselesaikan!"),
-            backgroundColor: Colors.green,
+            content: Text("Laporan berhasil ditolak"),
+            backgroundColor: Colors.red,
           ),
         );
         _loadReports(); // Reload data
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Gagal menyelesaikan laporan'),
+            content: Text(result['message'] ?? 'Gagal menolak laporan'),
             backgroundColor: Colors.red,
           ),
         );
@@ -416,6 +442,7 @@ class _HistoryRTState extends State<HistoryRT> {
                               ),
                               child: Column(
                                 children: [
+                                  // Foto laporan
                                   if (report.hasPhoto())
                                     ClipRRect(
                                       borderRadius: const BorderRadius.vertical(
@@ -512,24 +539,46 @@ class _HistoryRTState extends State<HistoryRT> {
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 18),
 
-                                        // Action Buttons
-                                        Center(
-                                          child: Column(
+                                        // Action Buttons - HANYA untuk laporan baru (pending & belum direkomendasi)
+                                        if (report.isPending() && selectedTab == 'laporan') ...[
+                                          const SizedBox(height: 18),
+                                          Row(
                                             children: [
-                                              // Tombol Konfirmasi (pending -> in_progress)
-                                              if (report.isPending())
-                                                ElevatedButton(
+                                              // Tombol Tolak
+                                              Expanded(
+                                                child: ElevatedButton.icon(
+                                                  onPressed: () =>
+                                                      _showPopupTolak(context, report),
+                                                  icon: const Icon(Icons.close, size: 18),
+                                                  label: const Text("Tolak"),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.red,
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                    ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(25),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              // Tombol Konfirmasi
+                                              Expanded(
+                                                child: ElevatedButton.icon(
                                                   onPressed: () =>
                                                       _showPopupKonfirmasi(
                                                           context, report),
+                                                  icon: const Icon(Icons.check, size: 18),
+                                                  label: const Text("Konfirmasi"),
                                                   style: ElevatedButton.styleFrom(
                                                     backgroundColor:
                                                         const Color(0xff6f3dee),
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 50,
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(
                                                       vertical: 12,
                                                     ),
                                                     shape: RoundedRectangleBorder(
@@ -537,48 +586,11 @@ class _HistoryRTState extends State<HistoryRT> {
                                                           BorderRadius.circular(25),
                                                     ),
                                                   ),
-                                                  child: const Text(
-                                                    "Konfirmasi",
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 15,
-                                                    ),
-                                                  ),
                                                 ),
-                                              
-                                              // Tombol Selesaikan (any status -> done)
-                                              if (!report.isDone()) ...[
-                                                const SizedBox(height: 10),
-                                                ElevatedButton(
-                                                  onPressed: () =>
-                                                      _showPopupSelesai(
-                                                          context, report),
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: Colors.green,
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 50,
-                                                      vertical: 12,
-                                                    ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(25),
-                                                    ),
-                                                  ),
-                                                  child: const Text(
-                                                    "Selesaikan",
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 15,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
+                                              ),
                                             ],
                                           ),
-                                        ),
+                                        ],
                                       ],
                                     ),
                                   ),

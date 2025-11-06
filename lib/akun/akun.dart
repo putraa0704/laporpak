@@ -21,10 +21,19 @@ class Profile extends StatefulWidget {
 class _ProfileState extends State<Profile> {
   final List<FlutterVizBottomNavigationBarModel> navItems = [
     FlutterVizBottomNavigationBarModel(icon: Icons.home, label: "Home"),
-    FlutterVizBottomNavigationBarModel(icon: Icons.calendar_today, label: "Date"),
+    FlutterVizBottomNavigationBarModel(
+      icon: Icons.calendar_today,
+      label: "Date",
+    ),
     FlutterVizBottomNavigationBarModel(icon: Icons.add, label: "Tambah"),
-    FlutterVizBottomNavigationBarModel(icon: Icons.description, label: "History"),
-    FlutterVizBottomNavigationBarModel(icon: Icons.account_circle, label: "Account"),
+    FlutterVizBottomNavigationBarModel(
+      icon: Icons.description,
+      label: "History",
+    ),
+    FlutterVizBottomNavigationBarModel(
+      icon: Icons.account_circle,
+      label: "Account",
+    ),
   ];
 
   final int _selectedIndex = 4;
@@ -72,30 +81,38 @@ class _ProfileState extends State<Profile> {
     // Tampilkan dialog konfirmasi
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Keluar Akun',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xff5f34e0),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: const Text('Ya, Keluar'),
+            title: const Text(
+              'Keluar Akun',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text(
+              'Apakah Anda yakin ingin keluar dari akun ini?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text(
+                  'Batal',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff5f34e0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Ya, Keluar'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirm == true) {
@@ -104,9 +121,10 @@ class _ProfileState extends State<Profile> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(color: Color(0xff5f34e0)),
-        ),
+        builder:
+            (context) => const Center(
+              child: CircularProgressIndicator(color: Color(0xff5f34e0)),
+            ),
       );
 
       // Proses logout
@@ -117,11 +135,7 @@ class _ProfileState extends State<Profile> {
 
       if (result['success']) {
         // Redirect ke login page
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/login',
-          (route) => false,
-        );
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -179,7 +193,13 @@ class _ProfileState extends State<Profile> {
             color: Colors.white,
           ),
         ),
-        leading: const Icon(Icons.menu, color: Colors.white, size: 24),
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset(
+            'assets/lapor_pak.png', // Pastikan file logo ada
+            fit: BoxFit.contain,
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
@@ -189,14 +209,15 @@ class _ProfileState extends State<Profile> {
       ),
 
       bottomNavigationBar: BottomNavigationBar(
-        items: navItems
-            .map(
-              (item) => BottomNavigationBarItem(
-                icon: Icon(item.icon),
-                label: item.label,
-              ),
-            )
-            .toList(),
+        items:
+            navItems
+                .map(
+                  (item) => BottomNavigationBarItem(
+                    icon: Icon(item.icon),
+                    label: item.label,
+                  ),
+                )
+                .toList(),
         currentIndex: _selectedIndex,
         backgroundColor: Colors.white,
         elevation: 8,
@@ -211,144 +232,154 @@ class _ProfileState extends State<Profile> {
         onTap: _onItemTapped,
       ),
 
-      body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xff5f34e0)),
-            )
-          : currentUser == null
+      body:
+          isLoading
+              ? const Center(
+                child: CircularProgressIndicator(color: Color(0xff5f34e0)),
+              )
+              : currentUser == null
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      const Text('Gagal memuat data user'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadUserData,
-                        child: const Text('Coba Lagi'),
-                      ),
-                    ],
-                  ),
-                )
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Gagal memuat data user'),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadUserData,
+                      child: const Text('Coba Lagi'),
+                    ),
+                  ],
+                ),
+              )
               : SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
-                  child: Column(
-                    children: [
-                      // FOTO PROFIL & NAMA
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Lottie.network(
-                            "https://assets8.lottiefiles.com/packages/lf20_8ydmsved.json",
-                            height: 180,
-                            width: 180,
-                            fit: BoxFit.cover,
-                          ),
-                          Container(
-                            height: 120,
-                            width: 120,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xff5f34e0).withOpacity(0.1),
-                              border: Border.all(
-                                  color: const Color(0xff5f34e0), width: 3),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                )
-                              ],
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 25,
+                ),
+                child: Column(
+                  children: [
+                    // FOTO PROFIL & NAMA
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Lottie.network(
+                          "https://assets8.lottiefiles.com/packages/lf20_8ydmsved.json",
+                          height: 180,
+                          width: 180,
+                          fit: BoxFit.cover,
+                        ),
+                        Container(
+                          height: 120,
+                          width: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xff5f34e0).withOpacity(0.1),
+                            border: Border.all(
+                              color: const Color(0xff5f34e0),
+                              width: 3,
                             ),
-                            child: Center(
-                              child: Text(
-                                currentUser!.getInitials(),
-                                style: const TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xff5f34e0),
-                                ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              currentUser!.getInitials(),
+                              style: const TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xff5f34e0),
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        currentUser!.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                          color: Colors.black87,
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      currentUser!.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.black87,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        currentUser!.getRoleLabel(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: Color(0xff5f34e0),
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      currentUser!.getRoleLabel(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Color(0xff5f34e0),
                       ),
-                      const SizedBox(height: 25),
+                    ),
+                    const SizedBox(height: 25),
 
-                      // INFO KONTAK
+                    // INFO KONTAK
+                    _infoCard(
+                      icon: Icons.mail_outline,
+                      title: "Email",
+                      value: currentUser!.email,
+                    ),
+                    const SizedBox(height: 14),
+
+                    if (currentUser!.hasPhone())
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _infoCard(
+                          icon: Icons.phone_outlined,
+                          title: "Nomor Telepon",
+                          value: currentUser!.phone!,
+                        ),
+                      ),
+
+                    if (currentUser!.hasAddress())
                       _infoCard(
-                        icon: Icons.mail_outline,
-                        title: "Email",
-                        value: currentUser!.email,
+                        icon: Icons.location_on_outlined,
+                        title: "Alamat",
+                        value: currentUser!.address!,
                       ),
-                      const SizedBox(height: 14),
-                      
-                      if (currentUser!.hasPhone())
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _infoCard(
-                            icon: Icons.phone_outlined,
-                            title: "Nomor Telepon",
-                            value: currentUser!.phone!,
+
+                    const SizedBox(height: 35),
+
+                    // TOMBOL LOGOUT
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _handleLogout,
+                        icon: const Icon(Icons.logout, color: Colors.white),
+                        label: const Text(
+                          "Keluar Akun",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
-
-                      if (currentUser!.hasAddress())
-                        _infoCard(
-                          icon: Icons.location_on_outlined,
-                          title: "Alamat",
-                          value: currentUser!.address!,
-                        ),
-
-                      const SizedBox(height: 35),
-
-                      // TOMBOL LOGOUT
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _handleLogout,
-                          icon: const Icon(Icons.logout, color: Colors.white),
-                          label: const Text(
-                            "Keluar Akun",
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xff5f34e0),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xff5f34e0),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 3,
-                          ),
+                          elevation: 3,
                         ),
                       ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                 ),
+              ),
     );
   }
 
@@ -370,10 +401,7 @@ class _ProfileState extends State<Profile> {
             offset: const Offset(0, 3),
           ),
         ],
-        border: Border.all(
-          color: const Color(0xffe7e3ff),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xffe7e3ff), width: 1),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

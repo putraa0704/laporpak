@@ -9,7 +9,6 @@ class AdminRTService {
   // ADMIN FUNCTIONS
   // ========================================
   
-  // Get dashboard stats
   static Future<Map<String, dynamic>> getDashboardStats() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -39,7 +38,6 @@ class AdminRTService {
     }
   }
 
-  // Get reports that need approval
   static Future<Map<String, dynamic>> getNeedApproval({
     String? tab,
     int? page,
@@ -81,48 +79,9 @@ class AdminRTService {
     }
   }
 
-  // Approve or reject report
-  static Future<Map<String, dynamic>> approveReport({
+  // Admin Konfirmasi laporan dari RT (pending -> in_progress)
+  static Future<Map<String, dynamic>> confirmReport({
     required int id,
-    required bool approved,
-    String? reason,
-  }) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) {
-        return {'success': false, 'message': 'Token tidak ditemukan'};
-      }
-
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/admin/reports/$id/approve'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'approved': approved,
-          'reason': reason,
-        }),
-      );
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['success']) {
-        return {'success': true, 'data': data['data'], 'message': data['message']};
-      } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal approve laporan'};
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
-
-  // Assign report to petugas
-  static Future<Map<String, dynamic>> assignToPetugas({
-    required int reportId,
-    required int petugasId,
     String? notes,
   }) async {
     try {
@@ -134,13 +93,12 @@ class AdminRTService {
       }
 
       final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/admin/reports/$reportId/assign'),
+        Uri.parse('${ApiConfig.baseUrl}/admin/reports/$id/confirm'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          'petugas_id': petugasId,
           'notes': notes,
         }),
       );
@@ -150,15 +108,18 @@ class AdminRTService {
       if (response.statusCode == 200 && data['success']) {
         return {'success': true, 'data': data['data'], 'message': data['message']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal assign petugas'};
+        return {'success': false, 'message': data['message'] ?? 'Gagal konfirmasi laporan'};
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
   }
 
-  // Get available petugas
-  static Future<Map<String, dynamic>> getAvailablePetugas() async {
+  // Admin Selesaikan laporan (any -> done)
+  static Future<Map<String, dynamic>> completeReport({
+    required int id,
+    String? notes,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
@@ -167,20 +128,23 @@ class AdminRTService {
         return {'success': false, 'message': 'Token tidak ditemukan'};
       }
 
-      final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/admin/petugas/available'),
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/admin/reports/$id/complete'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
+        body: jsonEncode({
+          'notes': notes,
+        }),
       );
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
-        return {'success': true, 'data': data['data']};
+        return {'success': true, 'data': data['data'], 'message': data['message']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil data petugas'};
+        return {'success': false, 'message': data['message'] ?? 'Gagal menyelesaikan laporan'};
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -191,7 +155,6 @@ class AdminRTService {
   // RT FUNCTIONS
   // ========================================
 
-  // Get RT dashboard stats
   static Future<Map<String, dynamic>> getRTDashboardStats() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -221,7 +184,6 @@ class AdminRTService {
     }
   }
 
-  // Get RT approval reports
   static Future<Map<String, dynamic>> getRTApprovalReports({
     String? tab,
     int? page,
@@ -263,38 +225,8 @@ class AdminRTService {
     }
   }
 
-  // RT Confirm Report (pending -> in_progress)
-  static Future<Map<String, dynamic>> confirmReport(int id) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) {
-        return {'success': false, 'message': 'Token tidak ditemukan'};
-      }
-
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/rt/reports/$id/confirm'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['success']) {
-        return {'success': true, 'data': data['data'], 'message': data['message']};
-      } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal konfirmasi laporan'};
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
-
-  // RT Complete Report (any status -> done)
-  static Future<Map<String, dynamic>> completeReport({
+  // RT Konfirmasi & Rekomendasikan ke Admin
+  static Future<Map<String, dynamic>> confirmAndRecommend({
     required int id,
     String? notes,
   }) async {
@@ -307,7 +239,7 @@ class AdminRTService {
       }
 
       final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/rt/reports/$id/complete'),
+        Uri.parse('${ApiConfig.baseUrl}/rt/reports/$id/confirm-recommend'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -322,14 +254,49 @@ class AdminRTService {
       if (response.statusCode == 200 && data['success']) {
         return {'success': true, 'data': data['data'], 'message': data['message']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal menyelesaikan laporan'};
+        return {'success': false, 'message': data['message'] ?? 'Gagal konfirmasi laporan'};
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
   }
 
-  // Get reports by date (for calendar)
+  // RT Tolak laporan
+  static Future<Map<String, dynamic>> rejectReport({
+    required int id,
+    required String reason,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        return {'success': false, 'message': 'Token tidak ditemukan'};
+      }
+
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/rt/reports/$id/reject'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'reason': reason,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        return {'success': true, 'data': data['data'], 'message': data['message']};
+      } else {
+        return {'success': false, 'message': data['message'] ?? 'Gagal menolak laporan'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
   static Future<Map<String, dynamic>> getReportsByDate({
     required int month,
     required int year,

@@ -17,8 +17,6 @@ class _ApprovementPageState extends State<Approvement> {
   String selectedTab = 'laporan';
   bool isLoading = true;
   List<ReportModel> reports = [];
-  
-  final TextEditingController reasonController = TextEditingController();
 
   final List<String> tabs = [
     "semua",
@@ -29,7 +27,7 @@ class _ApprovementPageState extends State<Approvement> {
 
   final Map<String, String> tabLabels = {
     "semua": "Semua",
-    "laporan": "Laporan",
+    "laporan": "Rekomendasi RT",
     "dalam_proses": "Dalam Proses",
     "selesai": "Selesai",
   };
@@ -47,12 +45,6 @@ class _ApprovementPageState extends State<Approvement> {
   void initState() {
     super.initState();
     _loadReports();
-  }
-
-  @override
-  void dispose() {
-    reasonController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadReports() async {
@@ -83,7 +75,127 @@ class _ApprovementPageState extends State<Approvement> {
     }
   }
 
-  Future<void> _handleApprove(ReportModel report, bool approved) async {
+  void _showPopupKonfirmasi(BuildContext context, ReportModel report) {
+    final TextEditingController notesController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Konfirmasi Laporan',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Apakah Anda yakin ingin mengkonfirmasi laporan \"${report.title}\"?",
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Status akan berubah menjadi Dalam Proses",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: notesController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: "Catatan (opsional)",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _handleConfirm(report, notesController.text);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff6f3dee),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text("Ya, Konfirmasi"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPopupSelesai(BuildContext context, ReportModel report) {
+    final TextEditingController notesController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Tandai Selesai',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Apakah laporan \"${report.title}\" sudah benar-benar selesai?",
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: notesController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: "Catatan penyelesaian (opsional)",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _handleComplete(report, notesController.text);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text("Ya, Selesai"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleConfirm(ReportModel report, String notes) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -92,28 +204,26 @@ class _ApprovementPageState extends State<Approvement> {
       ),
     );
 
-    final result = await AdminRTService.approveReport(
+    final result = await AdminRTService.confirmReport(
       id: report.id,
-      approved: approved,
-      reason: approved ? null : reasonController.text,
+      notes: notes.isNotEmpty ? notes : null,
     );
 
     if (mounted) {
-      Navigator.pop(context); // Close loading dialog
+      Navigator.pop(context); // Close loading
 
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Berhasil memproses laporan'),
-            backgroundColor: const Color(0xff6f3dee),
+          const SnackBar(
+            content: Text("Laporan berhasil dikonfirmasi!"),
+            backgroundColor: Color(0xff6f3dee),
           ),
         );
-        reasonController.clear();
         _loadReports(); // Reload data
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Gagal memproses laporan'),
+            content: Text(result['message'] ?? 'Gagal konfirmasi laporan'),
             backgroundColor: Colors.red,
           ),
         );
@@ -121,111 +231,40 @@ class _ApprovementPageState extends State<Approvement> {
     }
   }
 
-  void _showApprovalDialog(ReportModel report) {
-    String? selectedValidation;
-    
+  Future<void> _handleComplete(ReportModel report, String notes) async {
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            "Validasi Laporan",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Judul: ${report.title}"),
-                const SizedBox(height: 8),
-                Text("Lokasi: ${report.locationDescription}"),
-                const SizedBox(height: 16),
-                const Text(
-                  "Apakah pengajuan tervalidasi?",
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                Row(
-                  children: [
-                    Radio<String>(
-                      value: 'Ya',
-                      groupValue: selectedValidation,
-                      activeColor: const Color(0xff6f3dee),
-                      onChanged: (value) {
-                        setDialogState(() => selectedValidation = value);
-                      },
-                    ),
-                    const Text("Ya"),
-                    Radio<String>(
-                      value: 'Tidak',
-                      groupValue: selectedValidation,
-                      activeColor: const Color(0xff6f3dee),
-                      onChanged: (value) {
-                        setDialogState(() => selectedValidation = value);
-                      },
-                    ),
-                    const Text("Tidak"),
-                  ],
-                ),
-                if (selectedValidation == 'Tidak') ...[
-                  const SizedBox(height: 10),
-                  const Text(
-                    "Alasan penolakan:",
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: reasonController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: "Tulis alasan di sini...",
-                      hintStyle: const TextStyle(color: Colors.black38),
-                      filled: true,
-                      fillColor: const Color(0xfff7f4ff),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xffddd6fe),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                reasonController.clear();
-                Navigator.pop(dialogContext);
-              },
-              child: const Text("Batal"),
-            ),
-            ElevatedButton(
-              onPressed: selectedValidation == null
-                  ? null
-                  : () {
-                      Navigator.pop(dialogContext);
-                      _handleApprove(
-                        report,
-                        selectedValidation == 'Ya',
-                      );
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xff6f3dee),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text("Kirim"),
-            ),
-          ],
-        ),
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Colors.green),
       ),
     );
+
+    final result = await AdminRTService.completeReport(
+      id: report.id,
+      notes: notes.isNotEmpty ? notes : null,
+    );
+
+    if (mounted) {
+      Navigator.pop(context); // Close loading
+
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Laporan berhasil diselesaikan!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadReports(); // Reload data
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Gagal menyelesaikan laporan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _onItemTapped(int index) {
@@ -401,6 +440,7 @@ class _ApprovementPageState extends State<Approvement> {
                               ),
                               child: Column(
                                 children: [
+                                  // Foto laporan
                                   if (report.hasPhoto())
                                     ClipRRect(
                                       borderRadius: const BorderRadius.vertical(
@@ -496,36 +536,62 @@ class _ApprovementPageState extends State<Approvement> {
                                             ),
                                           ],
                                         ),
-                                        if (report.isPending()) ...[
-                                          const SizedBox(height: 18),
-                                          Center(
-                                            child: ElevatedButton(
-                                              onPressed: () =>
-                                                  _showApprovalDialog(report),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    const Color(0xff6f3dee),
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 50,
-                                                  vertical: 12,
+
+                                        // Action Buttons
+                                        const SizedBox(height: 18),
+                                        Row(
+                                          children: [
+                                            // Tombol Konfirmasi (hanya untuk pending)
+                                            if (report.isPending())
+                                              Expanded(
+                                                child: ElevatedButton.icon(
+                                                  onPressed: () =>
+                                                      _showPopupKonfirmasi(
+                                                          context, report),
+                                                  icon: const Icon(Icons.check_circle, size: 18),
+                                                  label: const Text("Konfirmasi"),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor:
+                                                        const Color(0xff6f3dee),
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                    ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(25),
+                                                    ),
+                                                  ),
                                                 ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(25),
-                                                ),
-                                                elevation: 3,
                                               ),
-                                              child: const Text(
-                                                "Proses Laporan",
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 15,
+                                            
+                                            // Spacing jika ada dua tombol
+                                            if (report.isPending() && !report.isDone())
+                                              const SizedBox(width: 10),
+                                            
+                                            // Tombol Selesaikan (untuk semua status kecuali done)
+                                            if (!report.isDone())
+                                              Expanded(
+                                                child: ElevatedButton.icon(
+                                                  onPressed: () =>
+                                                      _showPopupSelesai(context, report),
+                                                  icon: const Icon(Icons.done_all, size: 18),
+                                                  label: const Text("Selesaikan"),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.green,
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                    ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(25),
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ],
                                     ),
                                   ),

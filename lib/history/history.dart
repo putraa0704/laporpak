@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../flutterViz_bottom_navigationBar_model.dart';
 import '../services/report_service.dart';
 import '../models/report_model.dart';
+import '../config/api_config.dart';
 import '../Home/home.dart';
 import '../Date/date.dart';
 import '../Formulir/tambah.dart';
@@ -48,12 +49,12 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
 
     final result = await ReportService.getReports(
       status: selectedFilter == "all" ? null : selectedFilter,
-      myReports: true, // hanya laporan user sendiri
+      myReports: true,
     );
 
     if (result['success']) {
       final data = result['data'];
-      final List<dynamic> reportList = data['data']; // pagination data
+      final List<dynamic> reportList = data['data'];
       
       setState(() {
         reports = reportList.map((json) => ReportModel.fromJson(json)).toList();
@@ -61,12 +62,14 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
       });
     } else {
       setState(() => isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? 'Gagal memuat laporan'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Gagal memuat laporan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -277,26 +280,63 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (report.photo != null)
+          // Foto Laporan
+          if (report.hasPhoto())
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
               ),
               child: Image.network(
-                report.getPhotoUrl('https://coltishly-momentous-gabrielle.ngrok-free.dev'),
+                report.getPhotoUrl(ApiConfig.storageUrl),
                 width: double.infinity,
                 height: 170,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
                   return Container(
                     height: 170,
                     color: Colors.grey.shade200,
-                    child: const Icon(Icons.image_not_supported, size: 50),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                        color: const Color(0xff5f34e0),
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  print('Error loading image: $error');
+                  print('Image URL: ${report.getPhotoUrl(ApiConfig.storageUrl)}');
+                  return Container(
+                    height: 170,
+                    color: Colors.grey.shade200,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.broken_image,
+                          size: 50,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Gagal memuat gambar',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
             ),
+          
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(

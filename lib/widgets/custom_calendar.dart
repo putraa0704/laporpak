@@ -20,6 +20,12 @@ class _CustomCalendarState extends State<CustomCalendar> {
   late DateTime _currentMonth;
   late DateTime _selectedDate;
 
+  // Nama bulan dalam bahasa Indonesia
+  final List<String> _monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -57,15 +63,16 @@ class _CustomCalendarState extends State<CustomCalendar> {
     widget.onDateChanged(date);
   }
 
-  List<DateTime> _getDaysInMonth() {
+  List<DateTime?> _getDaysInMonth() {
     final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
     
-    List<DateTime> days = [];
+    List<DateTime?> days = [];
     
-    // Add empty days for alignment
-    for (int i = 0; i < firstDay.weekday % 7; i++) {
-      days.add(DateTime(1970)); // placeholder
+    // Add empty days for alignment (Minggu = 0, Senin = 1, dst)
+    int startWeekday = firstDay.weekday % 7; // Convert to 0-6 (Sunday-Saturday)
+    for (int i = 0; i < startWeekday; i++) {
+      days.add(null); // placeholder
     }
     
     // Add actual days
@@ -87,10 +94,13 @@ class _CustomCalendarState extends State<CustomCalendar> {
     return _isSameDay(date, today);
   }
 
+  String _getMonthYearText() {
+    return '${_monthNames[_currentMonth.month - 1]} ${_currentMonth.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final days = _getDaysInMonth();
-    final monthName = DateFormat('MMMM yyyy', 'id_ID').format(_currentMonth);
 
     return Column(
       children: [
@@ -105,7 +115,7 @@ class _CustomCalendarState extends State<CustomCalendar> {
                 onPressed: _previousMonth,
               ),
               Text(
-                monthName,
+                _getMonthYearText(),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -162,7 +172,7 @@ class _CustomCalendarState extends State<CustomCalendar> {
               final date = days[index];
               
               // Skip placeholder dates
-              if (date.year == 1970) {
+              if (date == null) {
                 return const SizedBox();
               }
 
@@ -208,6 +218,8 @@ class _CustomCalendarState extends State<CustomCalendar> {
             },
           ),
         ),
+
+        const SizedBox(height: 8),
       ],
     );
   }

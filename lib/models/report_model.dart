@@ -105,10 +105,11 @@ class ReportModel {
   bool isInProgress() => status == 'in_progress';
   bool isDone() => status == 'done';
 
-  String getPhotoUrl(String baseUrl) {
-    if (photo == null) return '';
+  // PERBAIKAN: Gunakan StorageUrl dari ApiConfig
+  String getPhotoUrl(String baseStorageUrl) {
+    if (photo == null || photo!.isEmpty) return '';
     if (photo!.startsWith('http')) return photo!;
-    return '$baseUrl/storage/$photo';
+    return '$baseStorageUrl/storage/$photo';
   }
 
   bool hasPhoto() => photo != null && photo!.isNotEmpty;

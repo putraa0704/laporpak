@@ -64,7 +64,7 @@ class _DateAdminState extends State<DateAdmin> {
   Future<void> _loadReports() async {
     setState(() => isLoading = true);
 
-    final result = await AdminRTService.getReportsByDate(
+   final result = await AdminRTService.getAdminReportsByDate(
       month: _selectedDate.month,
       year: _selectedDate.year,
     );
@@ -96,7 +96,6 @@ class _DateAdminState extends State<DateAdmin> {
       }
     }
   }
-
   void _filterReports() {
     setState(() {
       filteredReports =

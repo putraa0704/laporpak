@@ -5,9 +5,9 @@ import 'package:flutter_application_1/akun/akun_admin.dart';
 import 'package:video_player/video_player.dart';
 import '../flutterViz_bottom_navigationBar_model.dart';
 
-// ============================================
-// 🔹 Widget Video Autoplay di Header
-// ============================================
+
+//Widget Video Autoplay di Header
+
 class VideoHeader extends StatefulWidget {
   const VideoHeader({super.key});
 
@@ -139,9 +139,9 @@ class _VideoHeaderWargaState extends State<VideoHeader> {
   }
 }
 
-// ============================================
-// 🔹 Halaman Home Admin (Bottom Nav Diseragamkan)
-// ============================================
+
+//  Halaman Home Admin (Bottom Nav Diseragamkan)
+
 class HomeAdmin extends StatefulWidget {
   const HomeAdmin({super.key});
 

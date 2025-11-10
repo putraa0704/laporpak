@@ -9,6 +9,7 @@ class ReportModel {
   final String reportTime;
   final String status;
   final String? photo;
+  final String? photoUrl;
   final String? rejectionReason;
   final int? petugasId;
   final String? petugasNotes;
@@ -30,6 +31,7 @@ class ReportModel {
     required this.reportTime,
     required this.status,
     this.photo,
+    this.photoUrl,
     this.rejectionReason,
     this.petugasId,
     this.petugasNotes,
@@ -51,6 +53,7 @@ class ReportModel {
       reportTime: json['report_time'],
       status: json['status'],
       photo: json['photo'],
+      photoUrl: json['photo_url'],
       rejectionReason: json['rejection_reason'],
       petugasId: json['petugas_id'],
       petugasNotes: json['petugas_notes'],
@@ -73,6 +76,7 @@ class ReportModel {
       'report_time': reportTime,
       'status': status,
       'photo': photo,
+      'photo_url': photoUrl,
       'rejection_reason': rejectionReason,
       'petugas_id': petugasId,
       'petugas_notes': petugasNotes,
@@ -105,14 +109,27 @@ class ReportModel {
   bool isInProgress() => status == 'in_progress';
   bool isDone() => status == 'done';
 
-  // PERBAIKAN: Gunakan StorageUrl dari ApiConfig
+  // ✅ Gunakan photoUrl dari backend (PRIORITAS)
   String getPhotoUrl(String baseStorageUrl) {
+    // Jika ada photo_url dari backend, gunakan itu
+    if (photoUrl != null && photoUrl!.isNotEmpty) {
+      return photoUrl!;
+    }
+    
+    // Fallback: Jika hanya ada photo field
     if (photo == null || photo!.isEmpty) return '';
     if (photo!.startsWith('http')) return photo!;
+    
+    // Generate URL manual
+    if (photo!.startsWith('storage/')) {
+      return '$baseStorageUrl/$photo';
+    }
+    
     return '$baseStorageUrl/storage/$photo';
   }
 
-  bool hasPhoto() => photo != null && photo!.isNotEmpty;
+  bool hasPhoto() => (photoUrl != null && photoUrl!.isNotEmpty) || 
+                     (photo != null && photo!.isNotEmpty);
 
   String getReporterName() {
     return user?.name ?? 'Unknown';

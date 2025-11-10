@@ -5,6 +5,7 @@ import 'package:flutter_application_1/admin/home_admin.dart';
 import 'package:flutter_application_1/Date/dateadmin.dart';
 import '../services/admin_rt_service.dart';
 import '../models/report_model.dart';
+import '../config/api_config.dart';
 
 class Approvement extends StatefulWidget {
   const Approvement({super.key});
@@ -467,67 +468,63 @@ class _ApprovementPageState extends State<Approvement> {
                             ),
                             child: Column(
                               children: [
-                                // Foto laporan
-                                if (report.hasPhoto())
-                                  ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(16),
-                                    ),
-                                    child: Image.network(
-                                      report.getPhotoUrl(
-                                        'http://127.0.0.1:8000',
-                                      ), // Ubah sesuai URL Backend
-                                      width: double.infinity,
-                                      height: 200,
-                                      fit: BoxFit.cover,
-                                      loadingBuilder: (
-                                        context,
-                                        child,
-                                        loadingProgress,
-                                      ) {
-                                        if (loadingProgress == null)
-                                          return child;
-                                        return Container(
-                                          height: 200,
-                                          color: Colors.grey.shade200,
-                                          child: const Center(
-                                            child: CircularProgressIndicator(
-                                              color: Color(0xff6f3dee),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      errorBuilder: (
-                                        context,
-                                        error,
-                                        stackTrace,
-                                      ) {
-                                        return Container(
-                                          height: 200,
-                                          color: Colors.grey.shade200,
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.broken_image,
-                                                size: 50,
-                                                color: Colors.grey.shade400,
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                'Gagal memuat gambar',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey.shade600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
+                              
+if (report.hasPhoto())
+  ClipRRect(
+    borderRadius: const BorderRadius.vertical(
+      top: Radius.circular(16),
+    ),
+    child: Image.network(
+      report.photoUrl ?? '', // ✅ Langsung pakai photoUrl dari backend
+      width: double.infinity,
+      height: 200,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          height: 200,
+          color: Colors.grey.shade200,
+          child: Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+              color: const Color(0xff6f3dee),
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        // ✅ Log error untuk debugging
+        print('❌ Error loading image: $error');
+        print('🔗 Image URL: ${report.photoUrl}');
+        
+        return Container(
+          height: 200,
+          color: Colors.grey.shade200,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.broken_image,
+                size: 50,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Gagal memuat gambar',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ),
+  ),
                                 Padding(
                                   padding: const EdgeInsets.all(18),
                                   child: Column(

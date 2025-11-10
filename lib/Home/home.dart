@@ -6,9 +6,9 @@ import '../Formulir/tambah.dart';
 import '../history/history.dart';
 import '../akun/akun.dart';
 
-// ============================================
-// 🔹 Widget Video Autoplay di Header
-// ============================================
+
+//  Widget Video Autoplay di Header
+
 class VideoHeaderWarga extends StatefulWidget {
   const VideoHeaderWarga({super.key});
 
@@ -140,9 +140,9 @@ class _VideoHeaderWargaState extends State<VideoHeaderWarga> {
   }
 }
 
-// ============================================
-// 🔹 Halaman Home untuk Warga
-// ============================================
+
+//  Halaman Home untuk Warga
+
 class HomeWarga extends StatefulWidget {
   const HomeWarga({super.key});
 

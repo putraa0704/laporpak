@@ -5,9 +5,9 @@ import '../Date/datert.dart';
 import '../akun/akun_ketua.dart';
 import '../history/historyrt.dart';
 
-// ============================================
-// 🔹 Widget Video Autoplay di Header
-// ============================================
+
+//  Widget Video Autoplay di Header
+
 class VideoHeader extends StatefulWidget {
   const VideoHeader({super.key});
 
@@ -141,9 +141,9 @@ class _VideoHeaderRtState extends State<VideoHeader> {
   }
 }
 
-// ============================================
-// 🔹 Halaman Home Pak RT (Sama Gaya dengan Admin)
-// ============================================
+
+//  Halaman Home Pak RT (Sama Gaya dengan Admin)
+
 class HomeRt extends StatefulWidget {
   const HomeRt({super.key});
 
@@ -252,7 +252,7 @@ class _HomeRtState extends State<HomeRt> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 🔹 Header
+            //  Header
             Stack(
               children: [
                 Container(
@@ -302,7 +302,7 @@ class _HomeRtState extends State<HomeRt> {
               ],
             ),
 
-            // 🔹 Kartu Sambutan
+            //  Kartu Sambutan
             const SizedBox(height: 25),
             Container(
               width: double.infinity,
@@ -365,7 +365,7 @@ class _HomeRtState extends State<HomeRt> {
               ),
             ),
 
-            // 🔹 Langkah Penggunaan
+            //  Langkah Penggunaan
             const SizedBox(height: 25),
             Container(
               width: double.infinity,

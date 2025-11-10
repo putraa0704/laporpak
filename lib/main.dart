@@ -25,15 +25,12 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Lapor Pak',
-      theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(primarySwatch: Colors.deepPurple, useMaterial3: true),
 
-      // 👇 Halaman pertama yang muncul saat app dijalankan
+      // Halaman pertama yang muncul saat app dijalankan
       home: const SplashScreen(),
 
-      // 👇 Rute navigasi utama
+      // Rute navigasi utama
       routes: {
         '/login': (context) => const Login(),
         '/signup': (context) => const SignUp(),
@@ -75,8 +72,8 @@ void navigateToPage(BuildContext context, int index) {
       Navigator.pushReplacementNamed(context, '/rt');
       break;
     default:
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Menu belum diaktifkan")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Menu belum diaktifkan")));
   }
 }

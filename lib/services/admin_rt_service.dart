@@ -151,6 +151,46 @@ class AdminRTService {
     }
   }
 
+  // ✅ TAMBAHAN: Method khusus untuk Admin get reports by date
+  static Future<Map<String, dynamic>> getAdminReportsByDate({
+    required int month,
+    required int year,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        return {'success': false, 'message': 'Token tidak ditemukan'};
+      }
+
+      final uri = Uri.parse('${ApiConfig.baseUrl}/admin/reports/by-date').replace(
+        queryParameters: {
+          'month': month.toString(),
+          'year': year.toString(),
+        },
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        return {'success': true, 'data': data['data']};
+      } else {
+        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil data'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
   // ========================================
   // RT FUNCTIONS
   // ========================================
@@ -225,7 +265,6 @@ class AdminRTService {
     }
   }
 
-  // RT Konfirmasi & Rekomendasikan ke Admin
   static Future<Map<String, dynamic>> confirmAndRecommend({
     required int id,
     String? notes,
@@ -261,7 +300,6 @@ class AdminRTService {
     }
   }
 
-  // RT Tolak laporan
   static Future<Map<String, dynamic>> rejectReport({
     required int id,
     required String reason,

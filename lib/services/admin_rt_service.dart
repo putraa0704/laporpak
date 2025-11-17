@@ -8,7 +8,7 @@ class AdminRTService {
   // ========================================
   // ADMIN FUNCTIONS
   // ========================================
-  
+
   static Future<Map<String, dynamic>> getDashboardStats() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -31,7 +31,10 @@ class AdminRTService {
       if (response.statusCode == 200 && data['success']) {
         return {'success': true, 'data': data['data']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil statistik'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil statistik',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -56,8 +59,9 @@ class AdminRTService {
       if (page != null) queryParams['page'] = page.toString();
       if (perPage != null) queryParams['per_page'] = perPage.toString();
 
-      final uri = Uri.parse('${ApiConfig.baseUrl}/admin/reports/need-approval')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/admin/reports/need-approval',
+      ).replace(queryParameters: queryParams);
 
       final response = await http.get(
         uri,
@@ -72,7 +76,10 @@ class AdminRTService {
       if (response.statusCode == 200 && data['success']) {
         return {'success': true, 'data': data['data']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil data'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil data',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -98,17 +105,22 @@ class AdminRTService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'notes': notes,
-        }),
+        body: jsonEncode({'notes': notes}),
       );
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
-        return {'success': true, 'data': data['data'], 'message': data['message']};
+        return {
+          'success': true,
+          'data': data['data'],
+          'message': data['message'],
+        };
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal konfirmasi laporan'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal konfirmasi laporan',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -134,24 +146,29 @@ class AdminRTService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'notes': notes,
-        }),
+        body: jsonEncode({'notes': notes}),
       );
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
-        return {'success': true, 'data': data['data'], 'message': data['message']};
+        return {
+          'success': true,
+          'data': data['data'],
+          'message': data['message'],
+        };
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal menyelesaikan laporan'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal menyelesaikan laporan',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
   }
 
-  // ✅ TAMBAHAN: Method khusus untuk Admin get reports by date
+  //  TAMBAHAN: Method khusus untuk Admin get reports by date
   static Future<Map<String, dynamic>> getAdminReportsByDate({
     required int month,
     required int year,
@@ -164,11 +181,10 @@ class AdminRTService {
         return {'success': false, 'message': 'Token tidak ditemukan'};
       }
 
-      final uri = Uri.parse('${ApiConfig.baseUrl}/admin/reports/by-date').replace(
-        queryParameters: {
-          'month': month.toString(),
-          'year': year.toString(),
-        },
+      final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/admin/reports/by-date',
+      ).replace(
+        queryParameters: {'month': month.toString(), 'year': year.toString()},
       );
 
       final response = await http.get(
@@ -184,7 +200,10 @@ class AdminRTService {
       if (response.statusCode == 200 && data['success']) {
         return {'success': true, 'data': data['data']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil data'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil data',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -217,7 +236,10 @@ class AdminRTService {
       if (response.statusCode == 200 && data['success']) {
         return {'success': true, 'data': data['data']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil statistik'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil statistik',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -242,8 +264,9 @@ class AdminRTService {
       if (page != null) queryParams['page'] = page.toString();
       if (perPage != null) queryParams['per_page'] = perPage.toString();
 
-      final uri = Uri.parse('${ApiConfig.baseUrl}/rt/reports/approval')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/rt/reports/approval',
+      ).replace(queryParameters: queryParams);
 
       final response = await http.get(
         uri,
@@ -258,7 +281,10 @@ class AdminRTService {
       if (response.statusCode == 200 && data['success']) {
         return {'success': true, 'data': data['data']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil data'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil data',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -283,17 +309,22 @@ class AdminRTService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'notes': notes,
-        }),
+        body: jsonEncode({'notes': notes}),
       );
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
-        return {'success': true, 'data': data['data'], 'message': data['message']};
+        return {
+          'success': true,
+          'data': data['data'],
+          'message': data['message'],
+        };
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal konfirmasi laporan'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal konfirmasi laporan',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -318,17 +349,22 @@ class AdminRTService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'reason': reason,
-        }),
+        body: jsonEncode({'reason': reason}),
       );
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
-        return {'success': true, 'data': data['data'], 'message': data['message']};
+        return {
+          'success': true,
+          'data': data['data'],
+          'message': data['message'],
+        };
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal menolak laporan'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal menolak laporan',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -348,10 +384,7 @@ class AdminRTService {
       }
 
       final uri = Uri.parse('${ApiConfig.baseUrl}/rt/reports/by-date').replace(
-        queryParameters: {
-          'month': month.toString(),
-          'year': year.toString(),
-        },
+        queryParameters: {'month': month.toString(), 'year': year.toString()},
       );
 
       final response = await http.get(
@@ -367,7 +400,10 @@ class AdminRTService {
       if (response.statusCode == 200 && data['success']) {
         return {'success': true, 'data': data['data']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil data'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil data',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};

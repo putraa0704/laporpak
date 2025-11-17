@@ -16,7 +16,7 @@ class ReportModel {
   final String? completionNotes;
   final DateTime createdAt;
   final DateTime updatedAt;
-  
+
   // Relasi
   final UserRelation? user;
   final UserRelation? petugas;
@@ -43,6 +43,13 @@ class ReportModel {
   });
 
   factory ReportModel.fromJson(Map<String, dynamic> json) {
+    //  Debug: Print data yang diterima
+    print('🔍 Parsing ReportModel:');
+    print('   - ID: ${json['id']}');
+    print('   - Title: ${json['title']}');
+    print('   - Photo field: ${json['photo']}');
+    print('   - Photo URL field: ${json['photo_url']}');
+
     return ReportModel(
       id: json['id'],
       userId: json['user_id'],
@@ -53,7 +60,7 @@ class ReportModel {
       reportTime: json['report_time'],
       status: json['status'],
       photo: json['photo'],
-      photoUrl: json['photo_url'],
+      photoUrl: json['photo_url'], //  Ini yang penting!
       rejectionReason: json['rejection_reason'],
       petugasId: json['petugas_id'],
       petugasNotes: json['petugas_notes'],
@@ -61,7 +68,10 @@ class ReportModel {
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
       user: json['user'] != null ? UserRelation.fromJson(json['user']) : null,
-      petugas: json['petugas'] != null ? UserRelation.fromJson(json['petugas']) : null,
+      petugas:
+          json['petugas'] != null
+              ? UserRelation.fromJson(json['petugas'])
+              : null,
     );
   }
 
@@ -109,27 +119,12 @@ class ReportModel {
   bool isInProgress() => status == 'in_progress';
   bool isDone() => status == 'done';
 
-  // ✅ Gunakan photoUrl dari backend (PRIORITAS)
-  String getPhotoUrl(String baseStorageUrl) {
-    // Jika ada photo_url dari backend, gunakan itu
-    if (photoUrl != null && photoUrl!.isNotEmpty) {
-      return photoUrl!;
-    }
-    
-    // Fallback: Jika hanya ada photo field
-    if (photo == null || photo!.isEmpty) return '';
-    if (photo!.startsWith('http')) return photo!;
-    
-    // Generate URL manual
-    if (photo!.startsWith('storage/')) {
-      return '$baseStorageUrl/$photo';
-    }
-    
-    return '$baseStorageUrl/storage/$photo';
+  //  Simplified: Langsung gunakan photoUrl dari backend
+  bool hasPhoto() {
+    final result = photoUrl != null && photoUrl!.isNotEmpty;
+    print('📸 hasPhoto check for report #$id: $result (photoUrl: $photoUrl)');
+    return result;
   }
-
-  bool hasPhoto() => (photoUrl != null && photoUrl!.isNotEmpty) || 
-                     (photo != null && photo!.isNotEmpty);
 
   String getReporterName() {
     return user?.name ?? 'Unknown';

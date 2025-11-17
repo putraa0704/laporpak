@@ -1,9 +1,13 @@
 // lib/services/report_service.dart
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io'; // diperlukan untuk 'File' di mobile
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
+
+// [TAMBAHAN IMPORT]
+import 'package:flutter/foundation.dart'; // untuk kIsWeb
+import 'package:image_picker/image_picker.dart'; // untuk XFile
 
 class ReportService {
   // Create Report
@@ -13,7 +17,7 @@ class ReportService {
     required String locationDescription,
     required String reportDate,
     required String reportTime,
-    File? photo,
+    XFile? photo, // ◀️ [PERBAIKAN] Diubah dari File? ke XFile?
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -37,22 +41,58 @@ class ReportService {
       request.fields['report_date'] = reportDate;
       request.fields['report_time'] = reportTime;
 
+      // 🔽 [PERBAIKAN] Tambahkan logika untuk WEB vs MOBILE
       if (photo != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('photo', photo.path),
-        );
+        print('📸 Uploading photo: ${photo.name}');
+        
+        if (kIsWeb) {
+          // Logika untuk WEB
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'photo',
+              await photo.readAsBytes(),
+              filename: photo.name,
+            ),
+          );
+        } else {
+          // Logika untuk MOBILE (HP)
+          request.files.add(
+            await http.MultipartFile.fromPath('photo', photo.path),
+          );
+        }
       }
+      // 🔼 [PERBAIKAN SELESAI]
+
+      print('🚀 Sending request to: ${request.url}');
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
+
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
+
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 201 && data['success']) {
-        return {'success': true, 'data': data['data'], 'message': data['message']};
+        print('✅ Success! Report data:');
+        print('   - ID: ${data['data']['id']}');
+        print('   - Photo: ${data['data']['photo']}');
+        print('   - Photo URL: ${data['data']['photo_url']}');
+
+        return {
+          'success': true,
+          'data': data['data'],
+          'message': data['message'],
+        };
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal membuat laporan'};
+        print('❌ Upload failed: ${data['message']}');
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal membuat laporan',
+        };
       }
     } catch (e) {
+      print('❌ Exception: $e');
       return {'success': false, 'message': 'Error: $e'};
     }
   }
@@ -78,8 +118,11 @@ class ReportService {
       if (page != null) queryParams['page'] = page.toString();
       if (perPage != null) queryParams['per_page'] = perPage.toString();
 
-      final uri = Uri.parse('${ApiConfig.baseUrl}/reports')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/reports',
+      ).replace(queryParameters: queryParams);
+
+      print('📥 Fetching reports from: $uri');
 
       final response = await http.get(
         uri,
@@ -92,11 +135,27 @@ class ReportService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
+        final reportList = data['data']['data'] as List;
+        print('📋 Fetched ${reportList.length} reports');
+
+        if (reportList.isNotEmpty) {
+          final firstReport = reportList.first;
+          print('   First report:');
+          print('   - ID: ${firstReport['id']}');
+          print('   - Title: ${firstReport['title']}');
+          print('   - Photo: ${firstReport['photo']}');
+          print('   - Photo URL: ${firstReport['photo_url']}');
+        }
+
         return {'success': true, 'data': data['data']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil data'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil data',
+        };
       }
     } catch (e) {
+      print('❌ Exception: $e');
       return {'success': false, 'message': 'Error: $e'};
     }
   }
@@ -124,7 +183,10 @@ class ReportService {
       if (response.statusCode == 200 && data['success']) {
         return {'success': true, 'data': data['data']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil data'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil data',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -139,7 +201,7 @@ class ReportService {
     String? locationDescription,
     String? reportDate,
     String? reportTime,
-    File? photo,
+    XFile? photo, // Diubah ke XFile
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -167,10 +229,19 @@ class ReportService {
       if (reportDate != null) request.fields['report_date'] = reportDate;
       if (reportTime != null) request.fields['report_time'] = reportTime;
 
+      // Logika upload kIsWeb
       if (photo != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('photo', photo.path),
-        );
+         if (kIsWeb) {
+          request.files.add(http.MultipartFile.fromBytes(
+            'photo',
+            await photo.readAsBytes(),
+            filename: photo.name,
+          ));
+        } else {
+          request.files.add(
+            await http.MultipartFile.fromPath('photo', photo.path),
+          );
+        }
       }
 
       final streamedResponse = await request.send();
@@ -178,9 +249,16 @@ class ReportService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
-        return {'success': true, 'data': data['data'], 'message': data['message']};
+        return {
+          'success': true,
+          'data': data['data'],
+          'message': data['message'],
+        };
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal update laporan'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal update laporan',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -210,7 +288,10 @@ class ReportService {
       if (response.statusCode == 200 && data['success']) {
         return {'success': true, 'message': data['message']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal menghapus laporan'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal menghapus laporan',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
@@ -218,7 +299,9 @@ class ReportService {
   }
 
   // Get Statistics
-  static Future<Map<String, dynamic>> getStatistics({bool myStats = false}) async {
+  static Future<Map<String, dynamic>> getStatistics({
+    bool myStats = false,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
@@ -230,8 +313,9 @@ class ReportService {
       Map<String, String> queryParams = {};
       if (myStats) queryParams['my_stats'] = '1';
 
-      final uri = Uri.parse('${ApiConfig.baseUrl}/reports/statistics')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/reports/statistics',
+      ).replace(queryParameters: queryParams);
 
       final response = await http.get(
         uri,
@@ -246,7 +330,10 @@ class ReportService {
       if (response.statusCode == 200 && data['success']) {
         return {'success': true, 'data': data['data']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil statistik'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil statistik',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../flutterViz_bottom_navigationBar_model.dart';
 import '../services/report_service.dart';
 import '../models/report_model.dart';
-import '../config/api_config.dart';
 import '../Home/home.dart';
 import '../Date/date.dart';
 import '../Formulir/tambah.dart';
@@ -294,6 +293,12 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
   Widget _buildReportCard(ReportModel report) {
     final statusColor = _getStatusColor(report.status);
 
+    //  Debug log
+    print('🖼️ Building card for report #${report.id}');
+    print('   - Title: ${report.title}');
+    print('   - Photo URL: ${report.photoUrl}');
+    print('   - Has Photo: ${report.hasPhoto()}');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -310,68 +315,25 @@ class _HistoryLaporanPageState extends State<HistoryLaporan> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Foto Laporan
-          // Line ~321
-if (report.hasPhoto())
-  ClipRRect(
-    borderRadius: const BorderRadius.only(
-      topLeft: Radius.circular(16),
-      topRight: Radius.circular(16),
-    ),
-    child: Image.network(
-      report.photoUrl ?? '', // ✅ Ganti ini
-      width: double.infinity,
-      height: 170,
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          height: 170,
-          color: Colors.grey.shade200,
-          child: Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
-                  : null,
-              color: const Color(0xff5f34e0),
+          //  FOTO LAPORAN - SELALU DITAMPILKAN
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
             ),
+            child: _buildImageWidget(
+              report,
+            ), // <--- Panggilan ini sekarang valid
           ),
-        );
-      },
-      errorBuilder: (context, error, stackTrace) {
-        print('❌ Error loading image: $error');
-        print('🔗 URL: ${report.photoUrl}');
-        return Container(
-          height: 170,
-          color: Colors.grey.shade200,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.broken_image,
-                size: 50,
-                color: Colors.grey,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Gagal memuat gambar',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    ),
-  ),
 
+          // INFO LAPORAN
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment:
+                  CrossAxisAlignment
+                      .start, // Ditambahkan agar status badge sejajar
               children: [
                 Expanded(
                   child: Column(
@@ -384,6 +346,8 @@ if (report.hasPhoto())
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -416,6 +380,9 @@ if (report.hasPhoto())
                     ],
                   ),
                 ),
+                const SizedBox(
+                  width: 8,
+                ), // Memberi jarak antara teks dan status
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -441,5 +408,74 @@ if (report.hasPhoto())
         ],
       ),
     );
+  }
+
+  Widget _buildImageWidget(ReportModel report) {
+    return report.hasPhoto()
+        ? Image.network(
+          report.photoUrl ?? '',
+          width: double.infinity,
+          height: 170,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              height: 170,
+              color: Colors.grey.shade200,
+              child: Center(
+                child: CircularProgressIndicator(
+                  value:
+                      loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                  color: const Color(0xff5f34e0),
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            print('❌ Error loading image: $error');
+            print('🔗 URL: ${report.photoUrl}');
+            return Container(
+              height: 170,
+              color: Colors.grey.shade200,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.broken_image,
+                    size: 50,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Gagal memuat gambar',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                ],
+              ),
+            );
+          },
+        )
+        : Container(
+          height: 170,
+          color: Colors.grey.shade200,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.image_not_supported,
+                size: 50,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Tidak ada foto',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              ),
+            ],
+          ),
+        );
   }
 }

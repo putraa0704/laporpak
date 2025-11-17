@@ -5,7 +5,6 @@ import '../Date/datert.dart';
 import '../akun/akun_ketua.dart';
 import '../history/historyrt.dart';
 
-
 //  Widget Video Autoplay di Header
 
 class VideoHeader extends StatefulWidget {
@@ -141,7 +140,6 @@ class _VideoHeaderRtState extends State<VideoHeader> {
   }
 }
 
-
 //  Halaman Home Pak RT (Sama Gaya dengan Admin)
 
 class HomeRt extends StatefulWidget {
@@ -182,7 +180,7 @@ class _HomeRtState extends State<HomeRt> {
         nextPage = const DateRT();
         break;
       case 2:
-        nextPage = const HistoryRT(); // ✅ update nama class
+        nextPage = const HistoryRT(); //  update nama class
         break;
       case 3:
         nextPage = ProfilKetua();
@@ -415,75 +413,82 @@ class _HomeRtState extends State<HomeRt> {
                         ratio = 1.05;
 
                       return GridView.builder(
-  physics: const NeverScrollableScrollPhysics(),
-  shrinkWrap: true,
-  itemCount: steps.length,
-  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-    crossAxisCount: 2,
-    crossAxisSpacing: 14,
-    mainAxisSpacing: 14,
-    childAspectRatio: screenWidth < 350 ? 0.85 : screenWidth < 400 ? 0.95 : 1.0,
-  ),
-  itemBuilder: (context, index) {
-    final step = steps[index];
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xfff8f6ff),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: const Color(0xffe6e1ff),
-          width: 1,
-        ),
-      ),
-      padding: const EdgeInsets.all(10),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xff5f34e0).withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            padding: const EdgeInsets.all(8),
-            child: Icon(
-              step["icon"],
-              color: const Color(0xff5f34e0),
-              size: 24,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            step["title"],
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Flexible(
-            child: Text(
-              step["desc"],
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 10,
-                color: Colors.black54,
-                height: 1.2,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  },
-);                   
- },
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        itemCount: steps.length,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                          childAspectRatio:
+                              screenWidth < 350
+                                  ? 0.85
+                                  : screenWidth < 400
+                                  ? 0.95
+                                  : 1.0,
+                        ),
+                        itemBuilder: (context, index) {
+                          final step = steps[index];
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xfff8f6ff),
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                color: const Color(0xffe6e1ff),
+                                width: 1,
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(10),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xff5f34e0,
+                                    ).withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  padding: const EdgeInsets.all(8),
+                                  child: Icon(
+                                    step["icon"],
+                                    color: const Color(0xff5f34e0),
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  step["title"],
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                    height: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Flexible(
+                                  child: Text(
+                                    step["desc"],
+                                    textAlign: TextAlign.center,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.black54,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ],
               ),

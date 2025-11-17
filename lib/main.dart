@@ -39,7 +39,7 @@ class MyApp extends StatelessWidget {
         '/home_admin': (context) => HomeAdmin(), // admin
         '/historyrt': (context) => const HistoryRT(),
         '/tambah': (context) => const UploadKeluhan(), // warga
-        '/date': (context) => const DatePage(), // warga ✅ (hanya sekali)
+        '/date': (context) => const DatePage(), // warga  (hanya sekali)
         '/history': (context) => const HistoryLaporan(), // warga
         '/HistorAdmin': (context) => const Approvement(), // admin
         '/akun': (context) => Profile(), // warga

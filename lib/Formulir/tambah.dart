@@ -32,14 +32,25 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
 
   final List<FlutterVizBottomNavigationBarModel> navItems = [
     FlutterVizBottomNavigationBarModel(icon: Icons.home, label: "Home"),
-    FlutterVizBottomNavigationBarModel(icon: Icons.calendar_today, label: "Date"),
+    FlutterVizBottomNavigationBarModel(
+      icon: Icons.calendar_today,
+      label: "Date",
+    ),
     FlutterVizBottomNavigationBarModel(icon: Icons.add, label: "Tambah"),
-    FlutterVizBottomNavigationBarModel(icon: Icons.description, label: "History"),
-    FlutterVizBottomNavigationBarModel(icon: Icons.account_circle, label: "Account"),
+    FlutterVizBottomNavigationBarModel(
+      icon: Icons.description,
+      label: "History",
+    ),
+    FlutterVizBottomNavigationBarModel(
+      icon: Icons.account_circle,
+      label: "Account",
+    ),
   ];
 
   Future<void> _pickImage() async {
-    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery,
+    );
     if (pickedFile != null) {
       setState(() => _imageFile = pickedFile);
     }
@@ -124,12 +135,13 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
     try {
       // Format tanggal dan waktu
       final dateFormat = DateFormat('yyyy-MM-dd');
-      final timeFormat = '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}';
+      final timeFormat =
+          '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}';
 
-      File? photoFile;
-      if (_imageFile != null && !kIsWeb) {
-        photoFile = File(_imageFile!.path);
-      }
+      // 🔽 [PERBAIKAN DI SINI] 🔽
+      // Hapus logika 'File? photoFile' dan 'if (!kIsWeb)'
+      // Langsung kirim _imageFile (XFile) ke service.
+      // Service akan menangani logika web/mobile.
 
       final result = await ReportService.createReport(
         title: _judulController.text,
@@ -137,8 +149,9 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
         locationDescription: _lokasiController.text,
         reportDate: dateFormat.format(selectedDate!),
         reportTime: timeFormat,
-        photo: photoFile,
+        photo: _imageFile, // <-- Kirim _imageFile (XFile)
       );
+      // 🔼 [PERBAIKAN SELESAI] 🔼
 
       setState(() => isLoading = false);
 
@@ -166,10 +179,7 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
     } catch (e) {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -228,7 +238,7 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
           Padding(
             padding: EdgeInsets.only(right: 16),
             child: Icon(Icons.notifications_none, color: Colors.black87),
-          )
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -268,7 +278,10 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
               onTap: _pickImage,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 18,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
@@ -285,8 +298,11 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
                   children: [
                     Row(
                       children: const [
-                        Icon(Icons.cloud_upload_outlined,
-                            color: Color(0xff5f34e0), size: 24),
+                        Icon(
+                          Icons.cloud_upload_outlined,
+                          color: Color(0xff5f34e0),
+                          size: 24,
+                        ),
                         SizedBox(width: 12),
                         Text(
                           "Upload foto",
@@ -302,19 +318,20 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
                     if (_imageFile != null)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(14),
-                        child: kIsWeb
-                            ? Image.network(
-                                _imageFile!.path,
-                                width: double.infinity,
-                                height: 220,
-                                fit: BoxFit.cover,
-                              )
-                            : Image.file(
-                                File(_imageFile!.path),
-                                width: double.infinity,
-                                height: 220,
-                                fit: BoxFit.cover,
-                              ),
+                        child:
+                            kIsWeb
+                                ? Image.network(
+                                  _imageFile!.path,
+                                  width: double.infinity,
+                                  height: 220,
+                                  fit: BoxFit.cover,
+                                )
+                                : Image.file(
+                                  File(_imageFile!.path),
+                                  width: double.infinity,
+                                  height: 220,
+                                  fit: BoxFit.cover,
+                                ),
                       ),
                   ],
                 ),
@@ -330,7 +347,10 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
                   child: GestureDetector(
                     onTap: () => _pickDate(context),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 18,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(18),
@@ -347,13 +367,18 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
                         children: [
                           const Text(
                             "Tanggal",
-                            style: TextStyle(fontSize: 12, color: Colors.black54),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             selectedDate == null
                                 ? "Pilih tanggal"
-                                : DateFormat('dd/MM/yyyy').format(selectedDate!),
+                                : DateFormat(
+                                  'dd/MM/yyyy',
+                                ).format(selectedDate!),
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ],
@@ -366,7 +391,10 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
                   child: GestureDetector(
                     onTap: () => _pickTime(context),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 18,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(18),
@@ -383,7 +411,10 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
                         children: [
                           const Text(
                             "Waktu",
-                            style: TextStyle(fontSize: 12, color: Colors.black54),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -467,29 +498,33 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
                 onPressed: isLoading ? null : _submitReport,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xff5f34e0),
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 25),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 25,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                   elevation: 4,
                 ),
-                child: isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
+                child:
+                    isLoading
+                        ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                        : const Text(
+                          "Tambah Keluhan",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      )
-                    : const Text(
-                        "Tambah Keluhan",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
               ),
             ),
 
@@ -498,12 +533,15 @@ class _UploadKeluhanPageState extends State<UploadKeluhan> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: navItems
-            .map((e) => BottomNavigationBarItem(
-                  icon: Icon(e.icon),
-                  label: e.label,
-                ))
-            .toList(),
+        items:
+            navItems
+                .map(
+                  (e) => BottomNavigationBarItem(
+                    icon: Icon(e.icon),
+                    label: e.label,
+                  ),
+                )
+                .toList(),
         backgroundColor: Colors.white,
         currentIndex: selectedIndex,
         elevation: 8,

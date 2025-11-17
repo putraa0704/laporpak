@@ -5,7 +5,6 @@ import '../Date/datert.dart';
 import '../akun/akun_ketua.dart';
 import '../services/admin_rt_service.dart';
 import '../models/report_model.dart';
-import '../config/api_config.dart';
 
 class HistoryRT extends StatefulWidget {
   const HistoryRT({super.key});
@@ -234,8 +233,7 @@ class _HistoryRTState extends State<HistoryRT> {
     );
 
     if (mounted) {
-      Navigator.pop(context); // Close loading
-
+      Navigator.pop(context);
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -243,7 +241,7 @@ class _HistoryRTState extends State<HistoryRT> {
             backgroundColor: Color(0xff6f3dee),
           ),
         );
-        _loadReports(); // Reload data
+        _loadReports();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -270,8 +268,7 @@ class _HistoryRTState extends State<HistoryRT> {
     );
 
     if (mounted) {
-      Navigator.pop(context); // Close loading
-
+      Navigator.pop(context);
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -279,7 +276,7 @@ class _HistoryRTState extends State<HistoryRT> {
             backgroundColor: Colors.red,
           ),
         );
-        _loadReports(); // Reload data
+        _loadReports();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -360,12 +357,9 @@ class _HistoryRTState extends State<HistoryRT> {
           ),
         ],
       ),
-
       body: Column(
         children: [
           const SizedBox(height: 15),
-
-          // Filter Tabs
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -419,10 +413,7 @@ class _HistoryRTState extends State<HistoryRT> {
                   }).toList(),
             ),
           ),
-
           const SizedBox(height: 20),
-
-          // List Laporan
           Expanded(
             child:
                 isLoading
@@ -476,64 +467,112 @@ class _HistoryRTState extends State<HistoryRT> {
                             ),
                             child: Column(
                               children: [
-                                // Foto laporan dengan URL yang benar
-                               if (report.hasPhoto())
-  ClipRRect(
-    borderRadius: const BorderRadius.vertical(
-      top: Radius.circular(16),
-    ),
-    child: Image.network(
-      report.photoUrl ?? '', // ✅ Langsung pakai photoUrl dari backend
-      width: double.infinity,
-      height: 200,
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          height: 200,
-          color: Colors.grey.shade200,
-          child: Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
-                  : null,
-              color: const Color(0xff6f3dee),
-            ),
-          ),
-        );
-      },
-      errorBuilder: (context, error, stackTrace) {
-        // ✅ Log error untuk debugging
-        print('❌ Error loading image: $error');
-        print('🔗 Image URL: ${report.photoUrl}');
-        
-        return Container(
-          height: 200,
-          color: Colors.grey.shade200,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.broken_image,
-                size: 50,
-                color: Colors.grey.shade400,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Gagal memuat gambar',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    ),
-  ),
+                                //  FOTO LAPORAN - SELALU DITAMPILKAN
+                                ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(16),
+                                  ),
+                                  child:
+                                      report.hasPhoto()
+                                          ? Image.network(
+                                            report.photoUrl ?? '',
+                                            width: double.infinity,
+                                            height: 200,
+                                            fit: BoxFit.cover,
+                                            loadingBuilder: (
+                                              context,
+                                              child,
+                                              loadingProgress,
+                                            ) {
+                                              if (loadingProgress == null)
+                                                return child;
+                                              return Container(
+                                                height: 200,
+                                                color: Colors.grey.shade200,
+                                                child: Center(
+                                                  child: CircularProgressIndicator(
+                                                    value:
+                                                        loadingProgress
+                                                                    .expectedTotalBytes !=
+                                                                null
+                                                            ? loadingProgress
+                                                                    .cumulativeBytesLoaded /
+                                                                loadingProgress
+                                                                    .expectedTotalBytes!
+                                                            : null,
+                                                    color: const Color(
+                                                      0xff6f3dee,
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            errorBuilder: (
+                                              context,
+                                              error,
+                                              stackTrace,
+                                            ) {
+                                              print(
+                                                '❌ Error loading image: $error',
+                                              );
+                                              print(
+                                                '🔗 Image URL: ${report.photoUrl}',
+                                              );
+                                              return Container(
+                                                height: 200,
+                                                color: Colors.grey.shade200,
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.broken_image,
+                                                      size: 50,
+                                                      color:
+                                                          Colors.grey.shade400,
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      'Gagal memuat gambar',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color:
+                                                            Colors
+                                                                .grey
+                                                                .shade600,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          )
+                                          : Container(
+                                            height: 200,
+                                            color: Colors.grey.shade200,
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.image_not_supported,
+                                                  size: 50,
+                                                  color: Colors.grey.shade400,
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  'Tidak ada foto',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                ),
 
+                                // INFO LAPORAN
                                 Padding(
                                   padding: const EdgeInsets.all(18),
                                   child: Column(
@@ -612,13 +651,12 @@ class _HistoryRTState extends State<HistoryRT> {
                                         ],
                                       ),
 
-                                      // Action Buttons - HANYA untuk laporan baru (pending & belum direkomendasi)
+                                      // ACTION BUTTONS
                                       if (report.isPending() &&
                                           selectedTab == 'laporan') ...[
                                         const SizedBox(height: 18),
                                         Row(
                                           children: [
-                                            // Tombol Tolak
                                             Expanded(
                                               child: ElevatedButton.icon(
                                                 onPressed:
@@ -648,7 +686,6 @@ class _HistoryRTState extends State<HistoryRT> {
                                               ),
                                             ),
                                             const SizedBox(width: 10),
-                                            // Tombol Konfirmasi
                                             Expanded(
                                               child: ElevatedButton.icon(
                                                 onPressed:
@@ -692,12 +729,9 @@ class _HistoryRTState extends State<HistoryRT> {
                       ),
                     ),
           ),
-
           const SizedBox(height: 20),
         ],
       ),
-
-      // NAVIGATION BAR
       bottomNavigationBar: Container(
         height: 70,
         decoration: const BoxDecoration(

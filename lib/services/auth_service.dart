@@ -103,35 +103,48 @@ class AuthService {
   }
 
   // Get Current User
-  static Future<Map<String, dynamic>> getCurrentUser() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+ static Future<Map<String, dynamic>> getCurrentUser() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
 
-      if (token == null) {
-        return {'success': false, 'message': 'Token tidak ditemukan'};
-      }
-
-      final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/auth/me'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['success']) {
-        await prefs.setString('user', jsonEncode(data['data']));
-        return {'success': true, 'data': data['data']};
-      } else {
-        return {'success': false, 'message': data['message'] ?? 'Gagal mengambil data user'};
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+    if (token == null) {
+      return {'success': false, 'message': 'Token tidak ditemukan'};
     }
+
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/auth/me'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    final data = jsonDecode(response.body);
+
+    // Check jika token expired
+    if (response.statusCode == 401) {
+      // Hapus token lokal
+      await prefs.remove('token');
+      await prefs.remove('user');
+      
+      return {
+        'success': false, 
+        'message': data['message'] ?? 'Sesi berakhir',
+        'token_expired': true
+      };
+    }
+
+    if (response.statusCode == 200 && data['success']) {
+      await prefs.setString('user', jsonEncode(data['data']));
+      return {'success': true, 'data': data['data']};
+    } else {
+      return {'success': false, 'message': data['message'] ?? 'Gagal mengambil data user'};
+    }
+  } catch (e) {
+    return {'success': false, 'message': 'Error: $e'};
   }
+}
 
   // Check if logged in
   static Future<bool> isLoggedIn() async {
